@@ -2,6 +2,32 @@ import time
 import httpx
 
 BASE_URL = "http://147.96.81.252:7719"
+#qwen3-vl:8b
+
+
+# ---------------------------
+# Interacción con Ollama
+# ---------------------------
+def preguntar_llm(prompt):
+    """
+    Envía un prompt a Ollama y devuelve el texto de respuesta
+    """
+    try:
+        response = httpx.post(
+            "http://localhost:11434/api/generate",
+            json={
+                "model": "qwen3-vl:8b",
+                "prompt": prompt,
+                "stream": False
+            },
+            timeout=60
+        )
+        response.raise_for_status()
+        data = response.json()
+        return data.get("response", "")
+    except Exception as e:
+        print("Error al hablar con el LLM:", e)
+        return ""
 
 
 
@@ -38,16 +64,17 @@ def get_info():
 
         recursos = data.get("Recursos", {})
         objetivos = data.get("Objetivo", {})
-        aliases = data.get("Alias", ["Desconocido"])
+        aliases = data.get("Alias", ["Desconocido"])  # devuelve una lista de aliases
+        mi_alias = aliases[0] # coge el primer elemento de la lista de aliases 
         #alias_mio = aliases[0]
 
         buzon = data.get("Buzon", {})
 
-        return recursos, objetivos, buzon
+        return recursos, objetivos, mi_alias, buzon
 
     except Exception as e:
         print("Error al obtener info:", e)
-        return None, None, None
+        return None, None, None, None
 
 
 def get_gente():
@@ -112,12 +139,77 @@ def enviar_carta(remi, dest, asunto, cuerpo):
         print(f"Error al enviar carta a {dest}:", e)
 
 
+def interpretar_carta(carta, faltantes):
+    prompt = f"""
+        Eres un analizador de mensajes para un juego de trueque.
+        Tu tarea NO es negociar ni redactar respuestas, solo analizar.
+
+        CONTEXTO DEL JUEGO:
+        - Los jugadores intercambian recursos.
+        - El objetivo es conseguir los recursos necesarios lo antes posible.
+
+        CARTA RECIBIDA:
+        Remitente: {carta['remi']}
+        Asunto: {carta['asunto']}
+        Contenido:
+        {carta['cuerpo']}
+
+        RECURSOS QUE NECESITO ACTUALMENTE:
+        {faltantes}
+
+        INSTRUCCIONES IMPORTANTES:
+        - No inventes información que no esté en la carta.
+        - Si algo no está claro, dilo explícitamente.
+        - No escribas texto adicional fuera del formato pedido.
+
+        FORMATO DE RESPUESTA (OBLIGATORIO):
+        OFRECE: <recursos o "no claro">
+        QUIERE: <recursos o "no claro">
+        INTERES: ALTO / MEDIO / BAJO
+        RESPONDER: SI / NO
+        RAZON: <máx. 2 frases>
+        """
+    return preguntar_llm(prompt)
+
+
+def generar_respuesta(carta, sobrantes):
+    prompt = f"""
+        Eres un jugador humano, educado y estratégico en un juego de trueque.
+        Tu tarea es redactar una respuesta breve y natural.
+
+        CONTEXTO:
+        - Solo puedes ofrecer recursos que realmente te sobran.
+        - No debes prometer intercambios cerrados, solo proponer.
+        - El tono debe ser cordial, no agresivo.
+
+        CARTA ORIGINAL:
+        Remitente: {carta['remi']}
+        Asunto: {carta['asunto']}
+        Contenido:
+        {carta['cuerpo']}
+
+        RECURSOS QUE TE SOBRAN:
+        {sobrantes}
+
+        INSTRUCCIONES:
+        - No inventes recursos.
+        - No menciones recursos que no estén en la lista.
+        - Máximo 5 líneas.
+        - Lenguaje claro y humano.
+
+        ESCRIBE LA RESPUESTA:
+        """
+    return preguntar_llm(prompt)
+
+
+
 # ---------------------------
 # Main loop
 # ---------------------------
 def main():
     while True:
-        recursos, objetivos, buzon = get_info()
+        # 1) Obtener estado del juego
+        recursos, objetivos, mi_alias, buzon = get_info()
         if recursos is None:
             time.sleep(2)
             continue
@@ -131,8 +223,9 @@ def main():
         print("Recursos que me sobran:", sobrantes)
         print("Recursos que me faltan:", faltantes)
 
-        # Revisar buzón
+        # 2) Revisar buzón
         utiles = cartas_utiles(buzon, faltantes)
+
         print("\nCartas que podrían interesarme:")
         if not utiles:
             print("  (ninguna)")
@@ -141,29 +234,40 @@ def main():
                 print(f"De: {carta['remi']} | Asunto: {carta['asunto']}")
                 print(f"Contenido: {carta['cuerpo']}\n")
 
-        print("\nEl resto de cartas son inútiles, por lo que procederemos a eliminarlas...")
-        # Eliminar cartas inútiles
-        for carta_id, carta in buzon.items():
+                # Analizar con LLM
+                print("\n--- Analizando carta con LLM ---")
+                interpretacion = interpretar_carta(carta, faltantes)
+                print(interpretacion)
+
+                # Generar respuesta personalizada
+                respuesta = generar_respuesta(carta, sobrantes)
+                print("\n--- Respuesta generada ---")
+                print(respuesta)
+
+                # Enviar respuesta
+                enviar_carta(
+                    remi=mi_alias,
+                    dest=carta["remi"],
+                    asunto="Re: " + carta["asunto"],
+                    cuerpo=respuesta
+                )
+
+                # MUY IMPORTANTE: borrar carta tras procesarla
+                borrar_carta(carta["id"])
+
+        # 3) Eliminar cartas inútiles restantes
+        print("\nEliminando cartas inútiles...")
+        for _, carta in buzon.items():
             if carta not in utiles:
-                borrar_carta(carta['id'])
+                borrar_carta(carta["id"])
 
-        print("\n------------------------\n")
-        time.sleep(5)
-
-''' def main():
-    while True:
-        recursos, objetivos, mi_alias = get_info()
-        if recursos is None:
-            time.sleep(2)
-            continue
-
-        sobrantes = recursos_que_me_sobran(recursos, objetivos)
-        print(f"Recursos que me sobran: {sobrantes}")
-
-        if sobrantes:
+        # 4) Tomar iniciativa SOLO si nadie me ha escrito
+        if sobrantes and not utiles:
             gente = get_gente()
-            # quitamos nuestro propio alias
-            destinatarios = [p for p in gente if p != mi_alias]
+            destinatarios = [
+                p["alias"] for p in gente
+                if p.get("alias") != mi_alias
+            ]
 
             for dest in destinatarios:
                 cuerpo = "Hola, tengo estos recursos de sobra:\n"
@@ -173,12 +277,12 @@ def main():
                 enviar_carta(
                     remi=mi_alias,
                     dest=dest,
-                    asunto="Oferta de trueque a 1km de ti",
+                    asunto="Oferta de trueque",
                     cuerpo=cuerpo
                 )
 
         print("\n------------------------\n")
-        time.sleep(10)  # espera 10 segundos entre iteraciones'''
+        time.sleep(8)
 
 
 
