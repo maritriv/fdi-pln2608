@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = ">=3.12"
 
 [[package]]
@@ -93,14 +93,16 @@ wheels = [
 [[package]]
 name = "fdi-pln2608"
 version = "0.1.0"
-source = { virtual = "." }
+source = { editable = "." }
 dependencies = [
+    { name = "httpx" },
     { name = "ollama" },
     { name = "requests" },
 ]
 
 [package.metadata]
 requires-dist = [
+    { name = "httpx", specifier = ">=0.27.0" },
     { name = "ollama", specifier = ">=0.6.1" },
     { name = "requests", specifier = ">=2.32.5" },
 ]
