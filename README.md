@@ -1,77 +1,27 @@
-# 🤝 Trading Bot — PLN (FDI, UCM)
+# Trading Bot
 
 ## 📖 Descripción
 
-Proyecto de **Procesamiento del Lenguaje Natural (FDI, UCM)**.
+Proyecto de **Procesamiento del Lenguaje Natural**.
 
-El objetivo es desarrollar un **bot autónomo de negociación** capaz de interactuar con un servidor de trueque mediante cartas y envío de recursos.
+El objetivo es desarrollar un **agente basado en lenguaje natural** capaz de interactuar con un servidor de trueque mediante cartas y envío de recursos con otros agentes.
 
-El bot es capaz de:
+El agente es capaz de:
 
-- 📬 Leer cartas del buzón
-- 🧠 Interpretar ofertas estructuradas y no estructuradas
-- 🔄 Aceptar intercambios cuando son estratégicamente favorables
-- 📦 Enviar recursos automáticamente
-- ✉️ Confirmar intercambios
-- 🎲 Enviar ofertas proactivas con comportamiento parcialmente aleatorio
-- 🛡️ Evitar spam mediante cooldown por destinatario
+- Leer cartas del buzón
+- Interpretar ofertas estructuradas y no estructuradas
+- Aceptar intercambios cuando son estratégicamente favorables
+- Enviar recursos automáticamente
+- Confirmar intercambios
+- Enviar ofertas proactivas con comportamiento parcialmente aleatorio
+- Evitar spam mediante cooldown por destinatario
 
 El sistema combina reglas deterministas, parsing por regex y extracción flexible mediante LLM (Ollama).
 
 ---
 
-## ⚙️ Funcionalidades
-
-- Interpretación de ofertas en múltiples formatos:
-  - `[OFERTA_V1]` estructurada
-  - Expresiones tipo `1 arroz por 1 queso`
-  - Texto libre mediante LLM
-- Gestión de ofertas pendientes
-- Confirmación automática de intercambios
-- Anti-spam por destinatario
-- Sistema de logging para depuración
-- Comportamiento no determinista (intervalos y decisiones aleatorias)
-
----
-
 ## 📁 Estructura general del repositorio
-# 🤝 Trading Bot — PLN (FDI, UCM)
-
-## 📖 Descripción
-
-Proyecto de **Procesamiento del Lenguaje Natural (FDI, UCM)**.
-
-El objetivo es desarrollar un **bot autónomo de negociación** capaz de interactuar con un servidor de trueque mediante cartas y envío de recursos.
-
-El bot es capaz de:
-
-- 📬 Leer cartas del buzón
-- 🧠 Interpretar ofertas estructuradas y no estructuradas
-- 🔄 Aceptar intercambios cuando son estratégicamente favorables
-- 📦 Enviar recursos automáticamente
-- ✉️ Confirmar intercambios
-- 🎲 Enviar ofertas proactivas con comportamiento parcialmente aleatorio
-- 🛡️ Evitar spam mediante cooldown por destinatario
-
-El sistema combina reglas deterministas, parsing por regex y extracción flexible mediante LLM (Ollama).
-
----
-
-## ⚙️ Funcionalidades
-
-- Interpretación de ofertas en múltiples formatos:
-  - `[OFERTA_V1]` estructurada
-  - Expresiones tipo `1 arroz por 1 queso`
-  - Texto libre mediante LLM
-- Gestión de ofertas pendientes
-- Confirmación automática de intercambios
-- Anti-spam por destinatario
-- Sistema de logging para depuración
-- Comportamiento no determinista (intervalos y decisiones aleatorias)
-
----
-
-## 📁 Estructura general del repositorio
+```
 fdi-pln2608/
 ├── pln/
 │ ├── api/ ← Comunicación con el servidor
@@ -90,12 +40,12 @@ fdi-pln2608/
 │ ├── game.py ← Funciones auxiliares
 │ ├── logger.py ← Sistema de logging
 │ ├── main.py ← Bucle principal
-│ └── state.py ← Estado interno del bot
+│ └── state.py ← Estado interno del agente
 │
 ├── pyproject.toml ← Configuración del proyecto (uv)
 ├── uv.lock ← Lockfile
 └── README.md ← Documentación principal
-
+```
 
 ---
 
@@ -135,7 +85,7 @@ Devuelve siempre:
 
 ```json
 {"quiere": [...], "ofrece": [...]}
-
+```
 ---
 
 ### 📂 `pln/trading/`
@@ -196,6 +146,7 @@ Sistema de logging simple:
 
 ```python
 log("mensaje")
+```
 
 ## 📂 `pln/main.py`
 
@@ -215,9 +166,9 @@ Contiene el **bucle principal del bot**.
 
 ## 🔁 Flujo del sistema
 
-### 1️⃣ Consulta estado
+### 1️. Consulta estado
 
-El bot consulta:
+El agente consulta:
 
 ```
 GET /info
@@ -232,16 +183,16 @@ Obtiene:
 
 ---
 
-### 2️⃣ Análisis estratégico
+### 2️. Análisis estratégico
 
 Se calculan:
 
-- **Sobrantes** → recursos que puede ofrecer  
-- **Faltantes** → recursos necesarios para cumplir el objetivo  
+- **Recursos sobrantes** → recursos que puede ofrecer  
+- **Recuross faltantes** → recursos necesarios para cumplir el objetivo  
 
 ---
 
-### 3️⃣ Procesamiento del buzón
+### 3️. Procesamiento del buzón
 
 Si hay cartas:
 
@@ -256,16 +207,16 @@ Si no:
 
 ---
 
-### 4️⃣ Gestión de pendientes
+### 4. Gestión de pendientes
 
-Cuando el bot envía una oferta y el otro jugador confirma:
+Cuando el agente envía una oferta y el otro jugador confirma:
 
 - Se envía el recurso prometido  
 - Se elimina la oferta pendiente  
 
 ---
 
-### 5️⃣ Oferta proactiva (probabilística)
+### 5️. Oferta proactiva (probabilística)
 
 Con probabilidad `PROB_ENVIAR_OFERTA`:
 
@@ -276,11 +227,11 @@ Con probabilidad `PROB_ENVIAR_OFERTA`:
 
 ---
 
-### 6️⃣ Espera aleatoria
+### 6. Espera aleatoria
 
 Para evitar comportamiento determinista:
 
-```
+```python
 sleep(random entre SLEEP_MIN y SLEEP_MAX)
 ```
 
@@ -288,16 +239,16 @@ sleep(random entre SLEEP_MIN y SLEEP_MAX)
 
 ## 🛠️ Instalación del entorno
 
-### 1️⃣ Clonar repositorio
+### 1. Clonar repositorio
 
 ```
-git clone <repo>
+git clone https://github.com/maritriv/fdi-pln2608.git
 cd fdi-pln2608
 ```
 
 ---
 
-### 2️⃣ Instalar dependencias
+### 2. Instalar dependencias
 
 Instalar `uv` si no está instalado:
 
@@ -313,7 +264,7 @@ uv sync
 
 ---
 
-### 3️⃣ Configurar LLM (Ollama)
+### 3. Configurar LLM (Ollama)
 
 Instalar Ollama y descargar modelo:
 
@@ -334,7 +285,7 @@ http://localhost:11434/api/generate
 Desde la raíz del proyecto:
 
 ```
-uv run -m pln.main
+uv run fdi-pln-2608-p1
 ```
 
 Para detener el bot:
@@ -347,6 +298,8 @@ El sistema captura la señal y finaliza correctamente.
 
 ---
 
-## 👩‍💻 Equipo de desarrollo
+## Equipo de desarrollo
 
-Proyecto desarrollado por estudiantes del Grado en Ingeniería Informática / Inteligencia Artificial (UCM).
+Este proyecto fue desarrollado por los siguientes estudiantes del Grado en Ingeniería de Datos e Inteligencia Artificial (UCM): 
+- Carlota Salazar Martín
+- Marina Triviño de las Heras
