@@ -1,11 +1,16 @@
 import httpx
-from pln.config import BASE_URL
+from pln.config import BASE_URL, AGENTE
 from pln.logger import log
 from pln.nlp.normalize import es_mi_alias, extraer_mi_alias_desde_info
 
+
 def get_info():
     try:
-        r = httpx.get(f"{BASE_URL}/info", timeout=5.0)
+        r = httpx.get(
+            f"{BASE_URL}/info",
+            params={"agente": AGENTE} if AGENTE else None,
+            timeout=5.0,
+        )
         r.raise_for_status()
         data = r.json()
 
@@ -22,7 +27,11 @@ def get_info():
 
 def get_gente():
     try:
-        r = httpx.get(f"{BASE_URL}/gente", timeout=5.0)
+        r = httpx.get(
+            f"{BASE_URL}/gente",
+            params={"agente": AGENTE} if AGENTE else None,
+            timeout=5.0,
+        )
         r.raise_for_status()
         return r.json()
     except Exception as e:
@@ -32,7 +41,11 @@ def get_gente():
 
 def borrar_carta(uid):
     try:
-        r = httpx.delete(f"{BASE_URL}/mail/{uid}", timeout=5.0)
+        r = httpx.delete(
+            f"{BASE_URL}/mail/{uid}",
+            params={"agente": AGENTE} if AGENTE else None,
+            timeout=5.0,
+        )
         if r.status_code == 200:
             log(f"Carta {uid} eliminada del buzón.")
         else:
@@ -46,9 +59,21 @@ def enviar_carta(remi, dest, asunto, cuerpo, es_oferta=False):
         log(f"(seguridad) Bloqueo: intento de enviarme carta a mí misma ({dest}).")
         return False
 
-    payload = {"remi": remi, "dest": dest, "asunto": asunto, "cuerpo": cuerpo, "id": "", "fecha": ""}
+    payload = {
+        "remi": remi,
+        "dest": dest,
+        "asunto": asunto,
+        "cuerpo": cuerpo,
+        "id": "",
+        "fecha": "",
+    }
     try:
-        r = httpx.post(f"{BASE_URL}/carta", json=payload, timeout=5.0)
+        r = httpx.post(
+            f"{BASE_URL}/carta",
+            params={"agente": AGENTE} if AGENTE else None,
+            json=payload,
+            timeout=5.0,
+        )
         r.raise_for_status()
         icono = "✉️ " if es_oferta else ""
         log(f"{icono}Carta enviada a {dest} | Asunto: {asunto}")

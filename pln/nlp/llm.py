@@ -4,6 +4,7 @@ from pln.logger import log
 from pln.nlp.parse import parsear_json_llm
 from pln.nlp.normalize import normalizar_recurso
 
+
 def preguntar_llm(prompt: str) -> str:
     try:
         r = httpx.post(
@@ -16,6 +17,7 @@ def preguntar_llm(prompt: str) -> str:
     except Exception as e:
         log(f"LLM error: {e}")
         return ""
+
 
 def interpretar_carta_a_listas(carta):
     prompt = f"""
@@ -39,6 +41,10 @@ Contenido:
 """
     raw = preguntar_llm(prompt)
     data = parsear_json_llm(raw)
-    quiere = [normalizar_recurso(x) for x in data.get("quiere", []) if normalizar_recurso(x)]
-    ofrece = [normalizar_recurso(x) for x in data.get("ofrece", []) if normalizar_recurso(x)]
+    quiere = [
+        normalizar_recurso(x) for x in data.get("quiere", []) if normalizar_recurso(x)
+    ]
+    ofrece = [
+        normalizar_recurso(x) for x in data.get("ofrece", []) if normalizar_recurso(x)
+    ]
     return {"quiere": quiere, "ofrece": ofrece}

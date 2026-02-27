@@ -63,7 +63,9 @@ def enviar_oferta_proactiva(mi_alias: str, sobrantes: dict, faltantes: dict):
     ]
 
     if not destinatarios:
-        log("No hay destinatarios válidos porque no hay nadie más conectado al servidor.")
+        log(
+            "No hay destinatarios válidos porque no hay nadie más conectado al servidor."
+        )
         return
 
     dest = random.choice(destinatarios)

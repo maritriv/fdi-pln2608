@@ -35,9 +35,7 @@ def main() -> int:
     """
     try:
         while True:
-            # -------------------------------------------------
             # 1) Obtener estado actual del juego desde el servidor
-            # -------------------------------------------------
             recursos, objetivos, mi_alias, buzon = get_info()
 
             # Si hubo error al contactar con el servidor,
@@ -46,9 +44,7 @@ def main() -> int:
                 time.sleep(2)
                 continue
 
-            # -------------------------------------------------
             # 2) Calcular recursos estratégicos
-            # -------------------------------------------------
             # - Recursos sobrantes: lo que puedo intercambiar.
             # - Recursos faltantes: lo que necesito conseguir.
             sobrantes = recursos_que_me_sobran(recursos, objetivos)
@@ -61,26 +57,19 @@ def main() -> int:
             log(f"Recursos faltantes: {faltantes}")
             log(f"Ofertas pendientes: {OFERTAS_PENDIENTES}")
 
-            # -------------------------------------------------
             # 3) Limpieza de estado interno
-            # -------------------------------------------------
             # - Elimina ofertas pendientes demasiado antiguas.
             # - Limpia registros anti-spam viejos.
             limpiar_ofertas_viejas()
             limpiar_registro_antiguo()
 
-            # -------------------------------------------------
             # 4) Procesamiento del buzón
-            # -------------------------------------------------
             if buzon:
                 # Elegimos primero confirmaciones pendientes si existen
-                carta = elegir_carta_prioritaria(
-                    buzon, es_carta_confirmacion_pendiente
-                )
+                carta = elegir_carta_prioritaria(buzon, es_carta_confirmacion_pendiente)
 
                 # Verificamos que la carta no sea nuestra
                 if carta and not es_mi_alias(carta.get("remi"), mi_alias):
-
                     # Si es confirmación de una oferta pendiente,
                     # intentamos completar el intercambio.
                     if es_carta_confirmacion_pendiente(carta):
@@ -100,9 +89,7 @@ def main() -> int:
                     # Una vez procesada, eliminamos la carta del buzón.
                     borrar_carta(carta["id"])
 
-                # -------------------------------------------------
                 # 5) Alternancia aleatoria: enviar oferta o no
-                # -------------------------------------------------
                 # Para que el bot no sea determinista,
                 # decidimos aleatoriamente si enviar oferta.
                 if random.random() < PROB_ENVIAR_OFERTA:
@@ -112,9 +99,7 @@ def main() -> int:
                 # Si el buzón está vacío, intentamos enviar oferta.
                 enviar_oferta_proactiva(mi_alias, sobrantes, faltantes)
 
-            # -------------------------------------------------
             # 6) Espera aleatoria antes del siguiente ciclo
-            # -------------------------------------------------
             # Esto evita comportamiento demasiado mecánico.
             sleep_s = random.randint(SLEEP_MIN, SLEEP_MAX)
             log(f"Sleep {sleep_s}s")

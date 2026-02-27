@@ -1,6 +1,7 @@
 import re, json
 from pln.nlp.normalize import normalizar_recurso
 
+
 def parsear_json_llm(texto):
     if not texto:
         return {}
@@ -15,11 +16,12 @@ def parsear_json_llm(texto):
         ini = texto.find("{")
         fin = texto.rfind("}")
         if ini != -1 and fin != -1 and fin > ini:
-            return json.loads(texto[ini:fin + 1])
+            return json.loads(texto[ini : fin + 1])
     except Exception:
         return {}
 
     return {}
+
 
 def parse_oferta_v1(cuerpo):
     if not cuerpo or "[OFERTA_V1]" not in cuerpo:
@@ -40,6 +42,7 @@ def parse_oferta_v1(cuerpo):
         return [], []
 
     return quiere, ofrece
+
 
 def extraer_oferta_1x1_regex(texto):
     if not texto:

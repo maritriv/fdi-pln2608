@@ -52,10 +52,7 @@ def enviar_carta_confirmacion_devolucion(mi_alias, dest, ofrezco):
         ofrezco (str): Recurso que estamos devolviendo.
     """
     asunto = "Confirmación de envío"
-    cuerpo = (
-        f"¡Gracias! Recibido 🙂\n"
-        f"Te envío 1 de {ofrezco} como acordamos."
-    )
+    cuerpo = f"¡Gracias! Recibido 🙂\nTe envío 1 de {ofrezco} como acordamos."
 
     log(f"Enviando confirmación a {dest} (devuelvo 1 {ofrezco})")
     enviar_carta(mi_alias, dest, asunto, cuerpo)
@@ -161,7 +158,9 @@ def procesar_confirmacion_pendiente(carta, recursos, mi_alias, sobrantes):
     if recursos.get(ofrezco_real, 0) < 1:
         return False, f"no tengo {ofrezco_real} ahora"
 
-    log(f"(pendiente) Confirmación de {remi}. Envío 1 {ofrezco_real} (yo pedía {pido}).")
+    log(
+        f"(pendiente) Confirmación de {remi}. Envío 1 {ofrezco_real} (yo pedía {pido})."
+    )
 
     ok = enviar_paquete(remi, {ofrezco_real: 1}, mi_alias=mi_alias)
     if not ok:
