@@ -292,9 +292,9 @@ Para lanzar el agente en el entorno del laboratorio, desde la raíz del proyecto
    ```
 
 2. Ejecutar el agente:
-  ```
-  uv run fdi-pln-2608-p1
-  ```
+    ```
+    uv run fdi-pln-2608-p1
+    ```
 
 Para detener el bot:
 
