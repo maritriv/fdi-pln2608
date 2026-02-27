@@ -282,11 +282,19 @@ http://localhost:11434/api/generate
 
 ## ▶️ Ejecución
 
-Desde la raíz del proyecto:
+## 🚀 Ejecución
 
-```
-uv run fdi-pln-2608-p1
-```
+Para lanzar el agente en el entorno del laboratorio, desde la raíz del proyecto:
+
+1. Definir la dirección del Butler:
+   ```
+   export FDI_PLN__BUTLER_ADDRESS="http://127.0.0.1:7719"
+   ```
+
+2. Ejecutar el agente:
+  ```
+  uv run fdi-pln-2608-p1
+  ```
 
 Para detener el bot:
 
