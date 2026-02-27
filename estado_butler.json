@@ -1,0 +1,16 @@
+{
+  "127.0.0.1": {
+    "Alias": "águila valiente",
+    "Recursos": {
+      "piedra": 3,
+      "madera": 4,
+      "trigo": 5,
+      "oro": 8
+    },
+    "Objetivo": {
+      "ladrillos": 4,
+      "piedra": 5,
+      "queso": 5
+    }
+  }
+}

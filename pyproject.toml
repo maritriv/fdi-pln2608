@@ -1,7 +1,7 @@
 [project]
-name = "fdi-pln2608"
-version = "0.1.0"
-description = "Add your description here"
+name = "fdi-pln2608-p1"
+version = "1.0"
+description = "Agente de negocioación autónoma para PLN"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
