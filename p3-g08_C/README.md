@@ -71,6 +71,8 @@ Esto permitió detectar patrones importantes:
 
 Comparando estas frecuencias con la distribución de letras del español, llegamos a la hipótesis de que el sistema utilizaba **un desplazamiento similar al cifrado César** (pero no era César).
 
+Para más información, ver memoria "Práctica 3 - PLN" creada para narrar el proceso de investigación durante el primer día de laboratorio para esta práctica.
+
 ---
 
 # 5. Descubrimiento de los modificadores
@@ -323,6 +325,7 @@ La práctica ilustra cómo un sistema de codificación aparentemente complejo pu
 - reconstrucción incremental del sistema
 
 Una vez identificado el desplazamiento del alfabeto y los modificadores, resulta posible implementar un conversor completo entre texto UTF-8 y el formato binario PLNCG26.
+
 
 
 
