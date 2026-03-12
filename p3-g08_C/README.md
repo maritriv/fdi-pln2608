@@ -257,6 +257,8 @@ uv run fdi-pln-2608-p3.py decode largo.bin
 
 En el caso de `largo.bin`, el resultado corresponde al inicio de **Don Quijote de la Mancha**.
 
+El decodificador se implementó de forma robusta, permitiendo aplicar modificadores sobre letras tanto en minúscula como en mayúscula (pues los bytes cambian).
+
 ---
 
 ## detect (opcional)
@@ -325,6 +327,7 @@ La práctica ilustra cómo un sistema de codificación aparentemente complejo pu
 - reconstrucción incremental del sistema
 
 Una vez identificado el desplazamiento del alfabeto y los modificadores, resulta posible implementar un conversor completo entre texto UTF-8 y el formato binario PLNCG26.
+
 
 
 
