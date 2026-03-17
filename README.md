@@ -3,10 +3,14 @@
 
 Este repositorio contiene el conjunto de prácticas desarrolladas durante el curso, que abarcan desde la creación de agentes inteligentes y síntesis de voz, hasta criptoanálisis de codificaciones propias y sistemas de recuperación de información.
 
+-------
+
 # 👥 Equipo de Desarrollo
 
 - **Carlota Salazar Martín**
 - **Marina Triviño de las Heras**
+
+-------
 
 # 📂 Estructura del Proyecto
 
@@ -42,6 +46,8 @@ Localizado en `/p4-g08`. Buscador profesional de pasajes literales de El Quijote
 - **Funcionalidad**: Indexación de corpus HTML/ZIP, normalización de texto y ranking de relevancia.
 - **Interfaz**: Modo interactivo en terminal con resaltado de coincidencias y filtrado por capítulos.
 - **Tecnologías**: `BeautifulSoup4`, `Typer`, `joblib` para caché y `pytest`.
+
+-------
 
 # 🛠️ Configuración Global
 
