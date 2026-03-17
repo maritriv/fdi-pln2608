@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections import Counter
+import re
 from pathlib import Path
 from statistics import mean
 import sys
@@ -32,6 +33,7 @@ EXIT_COMMANDS = {"exit", "quit", "salir", "/exit", "/quit", "/salir"}
 console = Console()
 HELP_COMMANDS = {"/help", "help", "ayuda", "/ayuda"}
 STATS_COMMANDS = {"/stats", "stats", "estado", "/estado"}
+HIGHLIGHT_STYLE = "bold magenta"
 
 
 @app.command("index")
@@ -477,7 +479,7 @@ def _print_results(query: str, results: list[SearchResult], max_chars: int) -> N
         )
         content = Text()
         content.append(meta + "\n", style="dim")
-        content.append(excerpt)
+        content.append_text(_excerpt_to_rich_text(excerpt))
         console.print(
             Panel(
                 content,
@@ -486,6 +488,23 @@ def _print_results(query: str, results: list[SearchResult], max_chars: int) -> N
                 box=box.ROUNDED,
             )
         )
+
+
+def _excerpt_to_rich_text(excerpt: str) -> Text:
+    """Convierte marcas [coincidencia] en texto coloreado para terminal."""
+    rich_excerpt = Text()
+    cursor = 0
+    for match in re.finditer(r"\[([^\]]+)\]", excerpt):
+        start, end = match.span()
+        if start > cursor:
+            rich_excerpt.append(excerpt[cursor:start])
+        rich_excerpt.append(match.group(1), style=HIGHLIGHT_STYLE)
+        cursor = end
+
+    if cursor < len(excerpt):
+        rich_excerpt.append(excerpt[cursor:])
+
+    return rich_excerpt
 
 
 def _print_interactive_help() -> None:

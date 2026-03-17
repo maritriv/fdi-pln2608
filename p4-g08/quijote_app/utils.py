@@ -33,6 +33,66 @@ def tokenize_normalized(text: str) -> list[str]:
     return normalized.split()
 
 
+def expand_term_variants(term: str) -> set[str]:
+    """Genera variantes singular/plural b?sicas para un t?rmino."""
+    normalized = normalize_text(term)
+    if not normalized:
+        return set()
+    if " " in normalized:
+        return {normalized}
+
+    variants = {normalized}
+    pending = [normalized]
+    seen: set[str] = set()
+
+    while pending:
+        candidate = pending.pop()
+        if candidate in seen:
+            continue
+        seen.add(candidate)
+
+        plural = _to_plural_variant(candidate)
+        if plural and plural not in variants:
+            variants.add(plural)
+            pending.append(plural)
+
+        for singular in _singular_variants(candidate):
+            if singular not in variants:
+                variants.add(singular)
+                pending.append(singular)
+
+    return {item for item in variants if item and " " not in item and len(item) >= 2}
+
+
+def _to_plural_variant(term: str) -> str | None:
+    if len(term) < 2:
+        return None
+    if term.endswith("z"):
+        return term[:-1] + "ces"
+    if term.endswith("s"):
+        return None
+    if term[-1] in "aeiou":
+        return term + "s"
+    return term + "es"
+
+
+def _singular_variants(term: str) -> set[str]:
+    variants: set[str] = set()
+    if len(term) < 3:
+        return variants
+
+    if term.endswith("ces") and len(term) > 3:
+        variants.add(term[:-3] + "z")
+
+    if term.endswith("s") and len(term) > 4 and term[-2] in "aeiou":
+        variants.add(term[:-1])
+
+    if term.endswith("es") and len(term) > 5 and term[-3] not in "aeiou":
+        variants.add(term[:-2])
+
+    return {item for item in variants if item}
+
+
 def count_substring_occurrences(text: str, needle: str) -> int:
     """Cuenta ocurrencias no solapadas de `needle` en `text`."""
     if not needle:
@@ -77,24 +137,50 @@ def find_query_span(text: str, query: str) -> tuple[int, int] | None:
     if not normalized_text:
         return None
 
-    position = normalized_text.find(normalized_query)
-    matched_piece = normalized_query
-
-    if position < 0:
-        for token in tokenize_normalized(normalized_query):
-            position = normalized_text.find(token)
-            if position >= 0:
-                matched_piece = token
-                break
-
-    if position < 0:
+    normalized_match = _find_normalized_match_span(normalized_text, normalized_query)
+    if normalized_match is None:
         return None
 
-    end_position = position + len(matched_piece) - 1
+    position, end_exclusive = normalized_match
+    end_position = end_exclusive - 1
     if end_position >= len(mapping):
         return None
 
     return mapping[position], mapping[end_position] + 1
+
+
+def _find_normalized_match_span(normalized_text: str, normalized_query: str) -> tuple[int, int] | None:
+    exact_pattern = re.compile(
+        rf"(?<!\w){re.escape(normalized_query)}(?!\w)",
+        flags=re.IGNORECASE,
+    )
+    exact_match = exact_pattern.search(normalized_text)
+    if exact_match:
+        return exact_match.start(), exact_match.end()
+
+    if " " not in normalized_query:
+        variants = sorted(expand_term_variants(normalized_query), key=len, reverse=True)
+        for variant in variants:
+            variant_pattern = re.compile(
+                rf"(?<!\w){re.escape(variant)}(?!\w)",
+                flags=re.IGNORECASE,
+            )
+            variant_match = variant_pattern.search(normalized_text)
+            if variant_match:
+                return variant_match.start(), variant_match.end()
+
+    for token in tokenize_normalized(normalized_query):
+        variants = sorted(expand_term_variants(token), key=len, reverse=True)
+        for variant in variants:
+            variant_pattern = re.compile(
+                rf"(?<!\w){re.escape(variant)}(?!\w)",
+                flags=re.IGNORECASE,
+            )
+            variant_match = variant_pattern.search(normalized_text)
+            if variant_match:
+                return variant_match.start(), variant_match.end()
+
+    return None
 
 
 def highlight_span(text: str, span: tuple[int, int] | None) -> str:

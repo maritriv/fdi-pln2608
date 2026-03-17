@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 
 from quijote_app.models import Passage, PassageIndex, SearchResult
-from quijote_app.utils import count_substring_occurrences, normalize_text, tokenize_normalized
+from quijote_app.utils import expand_term_variants, normalize_text, tokenize_normalized
 
 
 def search_passages(
@@ -23,10 +23,14 @@ def search_passages(
     if not terms:
         raise ValueError("La consulta debe contener al menos un término útil.")
 
-    term_patterns = {
-        term: re.compile(rf"\b{re.escape(term)}\b", flags=re.IGNORECASE)
-        for term in terms
-    }
+    term_patterns: dict[str, re.Pattern[str]] = {}
+    for term in terms:
+        variants = sorted(expand_term_variants(term), key=len, reverse=True)
+        joined = "|".join(re.escape(variant) for variant in variants)
+        term_patterns[term] = re.compile(
+            rf"(?<!\w)(?:{joined})(?!\w)",
+            flags=re.IGNORECASE,
+        )
 
     chapter_filter_normalized = normalize_text(chapter_filter) if chapter_filter else None
     results: list[SearchResult] = []
@@ -55,7 +59,7 @@ def _score_passage(
     term_patterns: dict[str, re.Pattern[str]],
 ) -> SearchResult | None:
     text = passage.text_normalized
-    exact_matches = count_substring_occurrences(text, normalized_query)
+    exact_matches = _count_exact_query_matches(text, normalized_query)
 
     matched_terms = 0
     total_term_hits = 0
@@ -102,3 +106,12 @@ def _score_passage(
         matched_terms=matched_terms,
         total_term_hits=total_term_hits,
     )
+
+
+def _count_exact_query_matches(text: str, normalized_query: str) -> int:
+    """Cuenta coincidencias exactas de la consulta completa respetando l?mites de palabra."""
+    exact_pattern = re.compile(
+        rf"(?<!\w){re.escape(normalized_query)}(?!\w)",
+        flags=re.IGNORECASE,
+    )
+    return len(exact_pattern.findall(text))

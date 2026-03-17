@@ -72,3 +72,57 @@ def test_search_with_chapter_filter() -> None:
     assert len(results) == 1
     assert results[0].passage.chapter == "Capítulo XXV"
 
+
+
+def test_search_matches_singular_and_plural_forms() -> None:
+    passages = [
+        Passage(
+            passage_id="P100000",
+            order=0,
+            chapter="Cap?tulo X",
+            part="Primera parte",
+            text_original="... molino ...",
+            text_normalized=normalize_text("... molino ..."),
+        ),
+        Passage(
+            passage_id="P100001",
+            order=1,
+            chapter="Cap?tulo XI",
+            part="Primera parte",
+            text_original="... molinos ...",
+            text_normalized=normalize_text("... molinos ..."),
+        ),
+        Passage(
+            passage_id="P100002",
+            order=2,
+            chapter="Cap?tulo XII",
+            part="Primera parte",
+            text_original="... remolino ...",
+            text_normalized=normalize_text("... remolino ..."),
+        ),
+    ]
+
+    metadata = CorpusMetadata(
+        source_path=Path("dummy.html"),
+        source_kind="html",
+        source_size=0,
+        source_mtime_ns=0,
+        selected_entry=None,
+        chapter_count=3,
+        part_count=1,
+        passage_count=len(passages),
+    )
+    index = PassageIndex(
+        metadata=metadata,
+        built_at_iso="2026-01-01T00:00:00+00:00",
+        pipeline_version="1.0.0",
+        passages=passages,
+    )
+
+    results_singular = search_passages(index=index, query="molino", limit=10)
+    results_plural = search_passages(index=index, query="molinos", limit=10)
+
+    assert len(results_singular) == 2
+    assert len(results_plural) == 2
+    assert all("remolino" not in result.passage.text_normalized for result in results_singular)
+    assert all("remolino" not in result.passage.text_normalized for result in results_plural)
