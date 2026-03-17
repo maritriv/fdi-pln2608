@@ -84,5 +84,4 @@ Cada carpeta contiene su propio manual de uso, pero aquí tienes los comandos pr
 
 # 📝 Notas de Entrega
 
-- La **Práctica 3** presenta dos implementaciones individuales (`_C` y `_M) debido a la metodología de investigación seguida en el laboratorio.
-- La **Práctica 4** incluye una suite de tests completa para asegurar la integridad de la normalización y el motor de búsqueda.
+- La **Práctica 3** presenta dos implementaciones individuales (`_C` y `_M`) debido a la metodología de investigación seguida en el laboratorio.
