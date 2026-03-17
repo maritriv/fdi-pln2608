@@ -78,7 +78,7 @@ Cada carpeta contiene su propio manual de uso, pero aquí tienes los comandos pr
 
 - **P3 (Cripto)**: `uv run p3-g08_C/fdi-pln-2608-p3.py decode archivo.bin`
 
-- **P4 (Buscador)**: `python -m quijote_app interactive
+- **P4 (Buscador)**: `python -m quijote_app interactive`
 
 ------
 
