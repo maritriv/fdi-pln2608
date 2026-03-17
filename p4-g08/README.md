@@ -80,7 +80,7 @@ Si el ZIP contiene varios HTML, selecciona automáticamente el principal por heu
 Arranque más simple (sin parámetros): abre directamente la sesión interactiva.
 
 ```bash
-python -m quijote_app
+uv run -m quijote_app
 ```
 
 La salida usa paneles/tablas en terminal (estilo visual similar a la ayuda de Typer).
@@ -88,26 +88,26 @@ La salida usa paneles/tablas en terminal (estilo visual similar a la ayuda de Ty
 ### 6.1 Indexar
 
 ```bash
-python -m quijote_app index --source El_ingenioso_hidalgo_don_Quijote_de_la_Mancha.zip
+uv run -m quijote_app index --source El_ingenioso_hidalgo_don_Quijote_de_la_Mancha.zip
 ```
 
 Forzar reindexado:
 
 ```bash
-python -m quijote_app index --source El_ingenioso_hidalgo_don_Quijote_de_la_Mancha.zip --force
+uv run -m quijote_app index --source El_ingenioso_hidalgo_don_Quijote_de_la_Mancha.zip --force
 ```
 
 ### 6.2 Buscar
 
 ```bash
-python -m quijote_app search dulcinea --limit 5
-python -m quijote_app search "dulcinea del toboso" --limit 5
+uv run -m quijote_app search dulcinea --limit 5
+uv run -m quijote_app search "dulcinea del toboso" --limit 5
 ```
 
 Filtro por capítulo:
 
 ```bash
-python -m quijote_app search dulcinea --chapter "capítulo xiii" --limit 3
+uv run -m quijote_app search dulcinea --chapter "capítulo xiii" --limit 3
 ```
 
 ### 6.3 Modo interactivo (sesión continua)
@@ -115,8 +115,8 @@ python -m quijote_app search dulcinea --chapter "capítulo xiii" --limit 3
 Lanza una sesión y realiza varias consultas seguidas hasta escribir `exit`:
 
 ```bash
-python -m quijote_app interactive
-python -m quijote_app interactive --source El_ingenioso_hidalgo_don_Quijote_de_la_Mancha.zip
+uv run -m quijote_app interactive
+uv run -m quijote_app interactive --source El_ingenioso_hidalgo_don_Quijote_de_la_Mancha.zip
 ```
 
 Dentro de la sesión:
@@ -132,13 +132,13 @@ Dentro de la sesión:
 ### 6.4 Estadísticas
 
 ```bash
-python -m quijote_app stats
+uv run -m quijote_app stats
 ```
 
 ### 6.5 Listado de capítulos detectados
 
 ```bash
-python -m quijote_app chapters --limit 30
+uv run -m quijote_app chapters --limit 30
 ```
 
 ## 7. Cómo funciona la recuperación
@@ -208,4 +208,3 @@ Incluye pruebas para:
 - exportar resultados a `json` o `txt`;
 - filtros más finos por rangos de capítulos;
 - TUI opcional separada (por ejemplo con Textual).
-- Si busco "molino" me encuentre "molinos", y viceversa.

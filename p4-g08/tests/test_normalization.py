@@ -1,4 +1,4 @@
-from quijote_app.utils import expand_term_variants, find_query_span, normalize_text, render_excerpt
+from quijote_app.utils import expand_term_variants, find_query_span, normalize_text, render_excerpt, stem_spanish_token
 
 
 def test_normalize_text_case_accents_and_punctuation() -> None:
@@ -31,3 +31,14 @@ def test_render_excerpt_highlights_singular_for_plural_query() -> None:
     text = "Vio un molino en el campo."
     excerpt = render_excerpt(text, "molinos", max_chars=200)
     assert "[molino]" in excerpt.lower()
+
+
+def test_stem_spanish_token_matches_basic_verb_family() -> None:
+    assert stem_spanish_token("cantar") == stem_spanish_token("cantando")
+    assert stem_spanish_token("cantar") == stem_spanish_token("cantaba")
+
+
+def test_render_excerpt_highlights_verb_variant_from_root() -> None:
+    text = "Entonces cantaba con mucha alegria."
+    excerpt = render_excerpt(text, "cantar", max_chars=200)
+    assert "[cantaba]" in excerpt.lower()

@@ -13,6 +13,8 @@ dependencies = [
   "typer>=0.12,<1",
   "joblib>=1.4,<2",
   "rich>=13.7,<14",
+  "spacy>=3.7.5",
+  "es-core-news-sm",
 ]
 
 [project.optional-dependencies]
@@ -26,3 +28,6 @@ where = ["."]
 
 [tool.pytest.ini_options]
 addopts = "-q"
+
+[tool.uv.sources]
+es-core-news-sm = { url = "https://github.com/explosion/spacy-models/releases/download/es_core_news_sm-3.7.0/es_core_news_sm-3.7.0-py3-none-any.whl" }

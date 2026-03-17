@@ -1,11 +1,100 @@
-"""Utilidades de normalización y rendering en terminal."""
+"""Utilidades de normalizacion y rendering en terminal."""
 
 from __future__ import annotations
 
+from functools import lru_cache
 import re
 import unicodedata
 
 from quijote_app.config import SNIPPET_MAX_CHARS
+
+WORD_RE = re.compile(r"\w+", flags=re.IGNORECASE)
+SPACY_MODEL_NAME = "es_core_news_sm"
+
+try:
+    import spacy
+except ImportError:  # pragma: no cover - fallback defensivo
+    spacy = None  # type: ignore[assignment]
+
+# Sufijos frecuentes (sustantivos/adjetivos/verbos) para una raiz aproximada.
+# Se aplican de mayor a menor longitud y solo si la raiz restante tiene >= 3 letras.
+STEM_SUFFIXES = (
+    "ariamos",
+    "eriamos",
+    "iriamos",
+    "ariais",
+    "eriais",
+    "iriais",
+    "aremos",
+    "eremos",
+    "iremos",
+    "arian",
+    "erian",
+    "irian",
+    "arias",
+    "erias",
+    "irias",
+    "asteis",
+    "isteis",
+    "abamos",
+    "iamos",
+    "aramos",
+    "eramos",
+    "iramos",
+    "amiento",
+    "imientos",
+    "imiento",
+    "aciones",
+    "adores",
+    "adoras",
+    "logias",
+    "ucion",
+    "uciones",
+    "mente",
+    "idades",
+    "ismos",
+    "istas",
+    "anzas",
+    "ancia",
+    "encias",
+    "adora",
+    "ador",
+    "acion",
+    "able",
+    "ible",
+    "ando",
+    "iendo",
+    "yendo",
+    "ados",
+    "adas",
+    "idos",
+    "idas",
+    "aban",
+    "abas",
+    "aran",
+    "eran",
+    "iran",
+    "aron",
+    "ieron",
+    "amos",
+    "emos",
+    "imos",
+    "ais",
+    "eis",
+    "aba",
+    "ada",
+    "ado",
+    "ida",
+    "ido",
+    "ias",
+    "ian",
+    "aria",
+    "eria",
+    "iria",
+    "ar",
+    "er",
+    "ir",
+)
 
 
 def collapse_spaces(text: str) -> str:
@@ -14,7 +103,7 @@ def collapse_spaces(text: str) -> str:
 
 
 def normalize_text(text: str) -> str:
-    """Normaliza un texto para búsqueda robusta."""
+    """Normaliza un texto para busqueda robusta."""
     if not text:
         return ""
 
@@ -26,15 +115,42 @@ def normalize_text(text: str) -> str:
 
 
 def tokenize_normalized(text: str) -> list[str]:
-    """Tokeniza un texto ya normalizado."""
+    """Tokeniza usando spaCy (es) sobre texto normalizado."""
     normalized = normalize_text(text)
     if not normalized:
         return []
-    return normalized.split()
+
+    if spacy is None:
+        return normalized.split()
+
+    doc = _get_spanish_tokenizer().make_doc(normalized)
+    return [token.text for token in doc if not token.is_space]
+
+
+@lru_cache(maxsize=1)
+def _get_spanish_tokenizer():
+    """Instancia perezosa de spaCy para tokenizar en espanol."""
+    try:
+        return spacy.load(
+            SPACY_MODEL_NAME,
+            exclude=[
+                "attribute_ruler",
+                "lemmatizer",
+                "morphologizer",
+                "ner",
+                "parser",
+                "senter",
+                "tagger",
+                "tok2vec",
+            ],
+        )
+    except Exception:
+        # Fallback robusto si el modelo no esta instalado.
+        return spacy.blank("es")
 
 
 def expand_term_variants(term: str) -> set[str]:
-    """Genera variantes singular/plural b?sicas para un t?rmino."""
+    """Genera variantes singular/plural basicas para un termino."""
     normalized = normalize_text(term)
     if not normalized:
         return set()
@@ -93,6 +209,47 @@ def _singular_variants(term: str) -> set[str]:
     return {item for item in variants if item}
 
 
+def stem_spanish_token(token: str) -> str:
+    """Calcula una raiz aproximada para comparar variantes morfologicas."""
+    normalized = normalize_text(token)
+    if not normalized or " " in normalized:
+        return normalized
+
+    root = normalized
+
+    singulars = sorted(_singular_variants(root), key=len)
+    if singulars:
+        root = singulars[0]
+
+    for suffix in STEM_SUFFIXES:
+        if root.endswith(suffix) and len(root) - len(suffix) >= 3:
+            root = root[: -len(suffix)]
+            break
+
+    return root
+
+
+def tokens_match_by_root(query_token: str, candidate_token: str) -> bool:
+    """True si dos tokens coinciden por forma o por raiz."""
+    normalized_query = normalize_text(query_token)
+    normalized_candidate = normalize_text(candidate_token)
+
+    if not normalized_query or not normalized_candidate:
+        return False
+    if " " in normalized_query or " " in normalized_candidate:
+        return False
+
+    if normalized_candidate in expand_term_variants(normalized_query):
+        return True
+
+    query_stem = stem_spanish_token(normalized_query)
+    candidate_stem = stem_spanish_token(normalized_candidate)
+    if len(query_stem) < 3 or len(candidate_stem) < 3:
+        return False
+
+    return query_stem == candidate_stem
+
+
 def count_substring_occurrences(text: str, needle: str) -> int:
     """Cuenta ocurrencias no solapadas de `needle` en `text`."""
     if not needle:
@@ -101,7 +258,7 @@ def count_substring_occurrences(text: str, needle: str) -> int:
 
 
 def normalize_with_mapping(text: str) -> tuple[str, list[int]]:
-    """Normaliza y devuelve mapeo de índice normalizado -> índice original."""
+    """Normaliza y devuelve mapeo de indice normalizado -> indice original."""
     normalized_chars: list[str] = []
     mapping: list[int] = []
     prev_space = True
@@ -159,26 +316,34 @@ def _find_normalized_match_span(normalized_text: str, normalized_query: str) -> 
         return exact_match.start(), exact_match.end()
 
     if " " not in normalized_query:
-        variants = sorted(expand_term_variants(normalized_query), key=len, reverse=True)
-        for variant in variants:
-            variant_pattern = re.compile(
-                rf"(?<!\w){re.escape(variant)}(?!\w)",
-                flags=re.IGNORECASE,
-            )
-            variant_match = variant_pattern.search(normalized_text)
-            if variant_match:
-                return variant_match.start(), variant_match.end()
+        return _find_token_match_in_normalized_text(normalized_text, normalized_query)
 
     for token in tokenize_normalized(normalized_query):
-        variants = sorted(expand_term_variants(token), key=len, reverse=True)
-        for variant in variants:
-            variant_pattern = re.compile(
-                rf"(?<!\w){re.escape(variant)}(?!\w)",
-                flags=re.IGNORECASE,
-            )
-            variant_match = variant_pattern.search(normalized_text)
-            if variant_match:
-                return variant_match.start(), variant_match.end()
+        token_match = _find_token_match_in_normalized_text(normalized_text, token)
+        if token_match is not None:
+            return token_match
+
+    return None
+
+
+def _find_token_match_in_normalized_text(normalized_text: str, token: str) -> tuple[int, int] | None:
+    variants = sorted(expand_term_variants(token), key=len, reverse=True)
+    for variant in variants:
+        variant_pattern = re.compile(
+            rf"(?<!\w){re.escape(variant)}(?!\w)",
+            flags=re.IGNORECASE,
+        )
+        variant_match = variant_pattern.search(normalized_text)
+        if variant_match:
+            return variant_match.start(), variant_match.end()
+
+    query_stem = stem_spanish_token(token)
+    if len(query_stem) < 3:
+        return None
+
+    for candidate in WORD_RE.finditer(normalized_text):
+        if stem_spanish_token(candidate.group(0)) == query_stem:
+            return candidate.start(), candidate.end()
 
     return None
 
