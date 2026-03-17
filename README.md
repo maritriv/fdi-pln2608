@@ -1,6 +1,11 @@
-# PROCESAMIENTO DEL LENGUAJE NATURAL - GRUPO 08
+# PROCESAMIENTO DEL LENGUAJE NATURAL
+# GRUPO 08
+
 - **Integrantes**: Carlota Salazar y Marina Triviño
-# MacBrides
+- **Grupo**: 08
+
+tengo mi texto, tamos aquí? tengo que encontra  "losmolinos" en el quijote, si el quijote todo es unstring pues si loe cunetro aquí está qpero no queremos devolverle todo el quijote sino solo el chunk. el chunk es más texto que el molino. cómo encunetro el molino entocnes? cómo encuentro un objeto en este texto? el chunk, tokenizarlo tb. no solo buscar el token en el cuerpo entero sino tokenizar mi query en sus componentes. transformamos (normalizamos) esas componentes, y tendremos que hacer lo mismo en el chunk. trabajar con un cuerpo entero tokenizado. normalizar todas las palabras (buscar gat si tengo "gato", o gatos o gata. la clave es la raíz / el stem / el lema -> quito las S y O/A al final de las palabras. usar spaCy. no bajarse el modelo -> añadir al pyprojecto con uv add y ya uv se encargará de descargarlo si hace falta (al hacer uv run). no podemos usar pip ni download.
+encontrar la url del modelo y hacer uv add spaCy ahi: https://github.com/explosion/spacy-models/releases/download/es_core_news_sm-3.8.0/es_core_news_sm-3.8.0-py3-none-any.whl
 
 ## Descripción
 
