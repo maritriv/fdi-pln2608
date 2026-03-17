@@ -208,3 +208,4 @@ Incluye pruebas para:
 - exportar resultados a `json` o `txt`;
 - filtros más finos por rangos de capítulos;
 - TUI opcional separada (por ejemplo con Textual).
+- Si busco "molino" me encuentre "molinos", y viceversa.
