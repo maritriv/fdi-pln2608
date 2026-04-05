@@ -50,7 +50,8 @@ uv sync
 
 **2. Descargar el diccionario de español (por si spaCy no lo tiene):**
 ```bash
-uv run python -m spacy download es_core_news_sm
+uv run python -m spacy info es_core_news_sm --url
+uv pip install "<URL_DEVUELTA_POR_EL_COMANDO_ANTERIOR>"
 ```
 
 **3. Preparar Ollama:**
