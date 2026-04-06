@@ -1,4 +1,4 @@
-﻿"""Modelos de datos para corpus, indice y resultados."""
+"""Modelos de datos para corpus, indice y resultados."""
 
 from __future__ import annotations
 

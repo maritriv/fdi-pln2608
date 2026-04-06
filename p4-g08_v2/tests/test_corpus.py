@@ -1,4 +1,4 @@
-﻿import zipfile
+import zipfile
 
 from quijote_app.corpus import extract_passages_from_html, read_html_from_source
 
@@ -18,7 +18,9 @@ def test_extract_passages_from_html_detects_chapter_and_filters_footer() -> None
 
     assert len(passages) >= 1
     assert any("capitulo i" in chapter.lower() for chapter in chapters)
-    assert all("project gutenberg" not in passage.text_normalized for passage in passages)
+    assert all(
+        "project gutenberg" not in passage.text_normalized for passage in passages
+    )
 
 
 def test_read_html_from_zip_selects_main_entry(tmp_path) -> None:
@@ -59,5 +61,7 @@ def test_extract_passages_builds_overlap_chunks() -> None:
     passages, _chapters, _parts = extract_passages_from_html(html, min_words=20)
 
     assert len(passages) >= 2
-    overlap_hits = ["frase compartida" in passage.text_normalized for passage in passages]
+    overlap_hits = [
+        "frase compartida" in passage.text_normalized for passage in passages
+    ]
     assert sum(overlap_hits) >= 2

@@ -1,4 +1,4 @@
-﻿"""Utilidades de normalizacion y rendering en terminal."""
+"""Utilidades de normalizacion y rendering en terminal."""
 
 from __future__ import annotations
 
@@ -76,7 +76,9 @@ def find_query_span(text: str, query: str) -> tuple[int, int] | None:
     return mapping[position], mapping[end_position] + 1
 
 
-def _find_normalized_match_span(normalized_text: str, normalized_query: str) -> tuple[int, int] | None:
+def _find_normalized_match_span(
+    normalized_text: str, normalized_query: str
+) -> tuple[int, int] | None:
     exact_pattern = re.compile(
         rf"(?<!\w){re.escape(normalized_query)}(?!\w)",
         flags=re.IGNORECASE,

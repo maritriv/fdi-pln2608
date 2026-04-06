@@ -1,4 +1,4 @@
-﻿"""Carga, limpieza y segmentacion del corpus del Quijote."""
+"""Carga, limpieza y segmentacion del corpus del Quijote."""
 
 from __future__ import annotations
 
@@ -149,10 +149,14 @@ def load_corpus(
         raise CorpusError(f"La ruta del corpus no existe: {source}")
 
     html_text, selected_entry, source_kind = read_html_from_source(source)
-    passages, chapters, parts = extract_passages_from_html(html_text, min_words=min_words)
+    passages, chapters, parts = extract_passages_from_html(
+        html_text, min_words=min_words
+    )
 
     if not passages:
-        raise CorpusError("El corpus no produjo pasajes utiles tras limpieza y segmentacion.")
+        raise CorpusError(
+            "El corpus no produjo pasajes utiles tras limpieza y segmentacion."
+        )
 
     metadata = CorpusMetadata(
         source_path=source,
@@ -178,7 +182,11 @@ def read_html_from_source(source: Path) -> tuple[str, str | None, str]:
         raise CorpusError("Formato no soportado. Usa un .zip o .html/.htm")
 
     with zipfile.ZipFile(source, "r") as zipped:
-        html_entries = [entry for entry in zipped.infolist() if entry.filename.lower().endswith((".htm", ".html"))]
+        html_entries = [
+            entry
+            for entry in zipped.infolist()
+            if entry.filename.lower().endswith((".htm", ".html"))
+        ]
         if not html_entries:
             raise CorpusError("El ZIP no contiene ficheros HTML.")
 
@@ -196,7 +204,9 @@ def extract_passages_from_html(
     """Extrae pasajes en chunks con overlap preservando contexto de capitulo."""
     blocks = _extract_blocks_from_html(html_text)
 
-    markers_present = START_MARKER in html_text.upper() and END_MARKER in html_text.upper()
+    markers_present = (
+        START_MARKER in html_text.upper() and END_MARKER in html_text.upper()
+    )
     collecting = not markers_present
 
     current_part: str | None = None
@@ -227,12 +237,16 @@ def extract_passages_from_html(
 
             if CHAPTER_RE.search(text) or PROLOGUE_RE.search(text):
                 current_chapter = text
-                chapter_labels.add(_compose_chapter_label(current_part, current_chapter))
+                chapter_labels.add(
+                    _compose_chapter_label(current_part, current_chapter)
+                )
                 continue
 
             if current_chapter is None and _is_prelim_heading(text):
                 current_chapter = text
-                chapter_labels.add(_compose_chapter_label(current_part, current_chapter))
+                chapter_labels.add(
+                    _compose_chapter_label(current_part, current_chapter)
+                )
             continue
 
         if _word_count(text) < MIN_WORDS_PER_BLOCK:
@@ -245,7 +259,9 @@ def extract_passages_from_html(
         chapter_label = _compose_chapter_label(current_part, current_chapter)
 
         for piece in _split_long_text_unit(text):
-            units.append(_TextUnit(text=piece, chapter=chapter_label, part=current_part))
+            units.append(
+                _TextUnit(text=piece, chapter=chapter_label, part=current_part)
+            )
 
     passages = _build_overlap_chunks(units=units, min_words=min_words)
     return passages, chapter_labels, part_labels
@@ -256,6 +272,7 @@ def _extract_blocks_from_html(html_text: str) -> list[tuple[str, str]]:
     parser.feed(html_text)
     parser.close()
     return parser.blocks
+
 
 def _split_long_text_unit(text: str, max_words: int = MAX_WORDS_PER_UNIT) -> list[str]:
     """Divide un bloque largo en trozos mas pequenos, intentando respetar frases."""
@@ -295,7 +312,9 @@ def _split_long_text_unit(text: str, max_words: int = MAX_WORDS_PER_UNIT) -> lis
     if current:
         chunks.append(collapse_spaces(" ".join(current)))
 
-    return [chunk for chunk in chunks if chunk and _word_count(chunk) >= MIN_WORDS_PER_BLOCK]
+    return [
+        chunk for chunk in chunks if chunk and _word_count(chunk) >= MIN_WORDS_PER_BLOCK
+    ]
 
 
 def _split_by_words(text: str, max_words: int = MAX_WORDS_PER_UNIT) -> list[str]:
@@ -304,12 +323,13 @@ def _split_by_words(text: str, max_words: int = MAX_WORDS_PER_UNIT) -> list[str]
     chunks: list[str] = []
 
     for i in range(0, len(words), max_words):
-        piece = " ".join(words[i:i + max_words])
+        piece = " ".join(words[i : i + max_words])
         piece = collapse_spaces(piece)
         if piece:
             chunks.append(piece)
 
     return chunks
+
 
 def _build_overlap_chunks(units: list[_TextUnit], min_words: int) -> list[Passage]:
     if not units:
@@ -355,7 +375,9 @@ def _build_overlap_chunks(units: list[_TextUnit], min_words: int) -> list[Passag
             chunk_units = group[start:end]
             chunk_text = collapse_spaces(" ".join(unit.text for unit in chunk_units))
 
-            for final_piece in _split_by_words(chunk_text, max_words=CHUNK_TARGET_WORDS + 20):
+            for final_piece in _split_by_words(
+                chunk_text, max_words=CHUNK_TARGET_WORDS + 20
+            ):
                 if _word_count(final_piece) >= min_words:
                     passages.append(
                         Passage(
@@ -459,18 +481,22 @@ def _is_noise_text(text: str) -> bool:
         return True
     if re.fullmatch(r"[ivxlcdm]+", normalized):
         return True
-    if len(re.findall(r"\bde\b", normalized)) >= 8 and normalized.count("capitulo") >= 1:
+    if (
+        len(re.findall(r"\bde\b", normalized)) >= 8
+        and normalized.count("capitulo") >= 1
+    ):
         return True
     if len(re.findall(r"\bdonde\b", normalized)) >= 4:
         return True
-    
+
     title_like_starts = ("de ", "donde ", "del ", "que trata ", "como ")
     fragments = re.split(r"(?<=[.:;])\s+|\s{2,}", normalized)
     fragments = [frag.strip() for frag in fragments if frag.strip()]
     if len(fragments) >= 4:
-        title_like_count = sum(1 for frag in fragments if frag.startswith(title_like_starts))
+        title_like_count = sum(
+            1 for frag in fragments if frag.startswith(title_like_starts)
+        )
         if title_like_count >= 4:
             return True
 
     return False
-

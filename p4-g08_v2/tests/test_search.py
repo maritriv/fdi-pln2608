@@ -1,4 +1,4 @@
-﻿from pathlib import Path
+from pathlib import Path
 
 from quijote_app.models import CorpusMetadata, Passage, PassageIndex
 from quijote_app.nlp import annotate_passages, compute_document_frequencies
@@ -35,7 +35,9 @@ def test_search_simple_term() -> None:
             chapter="Capitulo I",
             part="Primera parte",
             text_original="En un lugar de la Mancha, de cuyo nombre no quiero acordarme.",
-            text_normalized=normalize_text("En un lugar de la Mancha, de cuyo nombre no quiero acordarme."),
+            text_normalized=normalize_text(
+                "En un lugar de la Mancha, de cuyo nombre no quiero acordarme."
+            ),
         ),
         Passage(
             passage_id="P000001",
@@ -43,7 +45,9 @@ def test_search_simple_term() -> None:
             chapter="Capitulo XIII",
             part="Primera parte",
             text_original="He querido llamar a la mia Dulcinea del Toboso.",
-            text_normalized=normalize_text("He querido llamar a la mia Dulcinea del Toboso."),
+            text_normalized=normalize_text(
+                "He querido llamar a la mia Dulcinea del Toboso."
+            ),
         ),
         Passage(
             passage_id="P000002",
@@ -51,7 +55,9 @@ def test_search_simple_term() -> None:
             chapter="Capitulo XXV",
             part="Primera parte",
             text_original="La sin par Dulcinea del Toboso era su dama.",
-            text_normalized=normalize_text("La sin par Dulcinea del Toboso era su dama."),
+            text_normalized=normalize_text(
+                "La sin par Dulcinea del Toboso era su dama."
+            ),
         ),
     ]
 
@@ -179,12 +185,16 @@ def test_search_with_chapter_filter() -> None:
             chapter="Capitulo XXV",
             part="Primera parte",
             text_original="Dulcinea vuelve a mencionarse en este otro.",
-            text_normalized=normalize_text("Dulcinea vuelve a mencionarse en este otro."),
+            text_normalized=normalize_text(
+                "Dulcinea vuelve a mencionarse en este otro."
+            ),
         ),
     ]
 
     index = _build_index(passages)
-    results = search_passages(index=index, query="dulcinea", limit=10, chapter_filter="xxv")
+    results = search_passages(
+        index=index, query="dulcinea", limit=10, chapter_filter="xxv"
+    )
 
     assert len(results) == 1
     assert results[0].passage.passage_id == "PF0002"

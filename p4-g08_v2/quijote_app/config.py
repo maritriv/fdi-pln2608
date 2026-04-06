@@ -1,4 +1,4 @@
-﻿"""Configuracion central del proyecto."""
+"""Configuracion central del proyecto."""
 
 from pathlib import Path
 

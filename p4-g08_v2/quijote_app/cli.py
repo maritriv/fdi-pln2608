@@ -1,4 +1,4 @@
-﻿"""CLI principal basada en Typer."""
+"""CLI principal basada en Typer."""
 
 from __future__ import annotations
 
@@ -36,6 +36,7 @@ HELP_COMMANDS = {"/help", "help", "ayuda", "/ayuda"}
 STATS_COMMANDS = {"/stats", "stats", "estado", "/estado"}
 HIGHLIGHT_STYLE = "bold magenta"
 VALID_MODES = {"classic", "semantic", "rag"}
+
 
 @app.command("index")
 def index_command(
@@ -98,7 +99,9 @@ def index_command(
 @app.command("search")
 def search_command(
     query: str = typer.Argument(..., help="Término o frase a buscar."),
-    mode: str = typer.Option("classic", "--mode", "-m", help="Modo: classic, semantic, rag"), # <-- ESTA LÍNEA NUEVA
+    mode: str = typer.Option(
+        "classic", "--mode", "-m", help="Modo: classic, semantic, rag"
+    ),  # <-- ESTA LÍNEA NUEVA
     source: Optional[Path] = typer.Option(
         None,
         "--source",
@@ -143,7 +146,9 @@ def search_command(
 ) -> None:
     """Busca y devuelve pasajes relevantes del corpus usando lemas."""
     if not query.strip():
-        typer.secho("Error: la consulta no puede estar vacía.", fg=typer.colors.RED, err=True)
+        typer.secho(
+            "Error: la consulta no puede estar vacía.", fg=typer.colors.RED, err=True
+        )
         raise typer.Exit(code=1)
 
     try:
@@ -159,9 +164,17 @@ def search_command(
 
         if mode == "rag":
             console.print("\n[dim]Pensando respuesta con IA...[/dim]")
-            answer = generate_answer(index, query, mode="semantic", limit=limit, chapter_filter=chapter)
+            answer = generate_answer(
+                index, query, mode="semantic", limit=limit, chapter_filter=chapter
+            )
             console.print()
-            console.print(Panel(answer, title="[bold green]Respuesta RAG[/bold green]", border_style="green"))
+            console.print(
+                Panel(
+                    answer,
+                    title="[bold green]Respuesta RAG[/bold green]",
+                    border_style="green",
+                )
+            )
             return  # El RAG no imprime lista de pasajes
 
         if mode == "semantic":
@@ -190,7 +203,12 @@ def search_command(
     console.print(Panel(summary, title="[bold]Resumen[/bold]", border_style="cyan"))
     console.print()
 
-    _print_results(query=query, results=results, max_chars=max_chars, is_semantic=(mode=="semantic"))
+    _print_results(
+        query=query,
+        results=results,
+        max_chars=max_chars,
+        is_semantic=(mode == "semantic"),
+    )
 
 
 @app.command("interactive")
@@ -272,13 +290,17 @@ def _run_interactive_session(
 
     current_limit = limit
     current_chapter = chapter
-    current_mode = "classic" # <-- NUEVO
-    cache_status = "desactivada" if no_cache else ("reutilizada" if from_cache else "actualizada")
-    
+    current_mode = "classic"  # <-- NUEVO
+    cache_status = (
+        "desactivada" if no_cache else ("reutilizada" if from_cache else "actualizada")
+    )
+
     welcome = Text()
     welcome.append("Hola, soy Quijote App.\n", style="bold cyan")
     welcome.append("Buscador multimodelo del Quijote para consultas en terminal.\n")
-    welcome.append("Modos disponibles: Clásico (lemas), Semántico (embeddings) y RAG.\n\n")
+    welcome.append(
+        "Modos disponibles: Clásico (lemas), Semántico (embeddings) y RAG.\n\n"
+    )
     welcome.append(f"Fuente cargada: {resolved_source}\n", style="dim")
     if no_cache:
         welcome.append("Cache: desactivada\n", style="dim")
@@ -287,7 +309,9 @@ def _run_interactive_session(
     welcome.append("\nSi es tu primera vez, ejecuta ", style="bold")
     welcome.append("/help", style="bold cyan")
     welcome.append(" para ver comandos con ejemplos.\n")
-    console.print(Panel.fit(welcome, title="[bold]Sesion interactiva[/bold]", border_style="cyan"))
+    console.print(
+        Panel.fit(welcome, title="[bold]Sesion interactiva[/bold]", border_style="cyan")
+    )
     _print_quickstart_guide()
     console.print()
 
@@ -326,7 +350,9 @@ def _run_interactive_session(
             try:
                 parsed_limit = int(value)
             except ValueError:
-                console.print("[yellow]Valor de /limit invalido. Debe ser un entero.[/yellow]")
+                console.print(
+                    "[yellow]Valor de /limit invalido. Debe ser un entero.[/yellow]"
+                )
                 continue
 
             if parsed_limit < 1 or parsed_limit > 100:
@@ -349,33 +375,57 @@ def _run_interactive_session(
                 console.print("[green]Filtro de capitulo desactivado.[/green]")
             else:
                 current_chapter = chapter_value
-                console.print(f"[green]Filtro de capitulo activo:[/green] {current_chapter}")
+                console.print(
+                    f"[green]Filtro de capitulo activo:[/green] {current_chapter}"
+                )
             continue
 
         # --- AQUÍ AÑADIMOS EL CAMBIO DE MODO ---
         if lowered.startswith("/mode ") or lowered.startswith("mode "):
-            new_mode = query.split(maxsplit=1)[1].strip().lower() if " " in query else ""
+            new_mode = (
+                query.split(maxsplit=1)[1].strip().lower() if " " in query else ""
+            )
             if new_mode in VALID_MODES:
                 current_mode = new_mode
-                console.print(f"[green]Modo cambiado a:[/green] [bold]{current_mode.upper()}[/bold]")
+                console.print(
+                    f"[green]Modo cambiado a:[/green] [bold]{current_mode.upper()}[/bold]"
+                )
             else:
-                console.print(f"[yellow]Modo inválido. Usa: {', '.join(VALID_MODES)}[/yellow]")
+                console.print(
+                    f"[yellow]Modo inválido. Usa: {', '.join(VALID_MODES)}[/yellow]"
+                )
             continue
 
         if query.startswith("/"):
-            console.print("[yellow]Comando no reconocido. Usa /help para ver comandos validos.[/yellow]")
+            console.print(
+                "[yellow]Comando no reconocido. Usa /help para ver comandos validos.[/yellow]"
+            )
             continue
 
         # --- AQUÍ ESTÁ LA NUEVA EJECUCIÓN DE LA BÚSQUEDA ---
         try:
             if current_mode == "rag":
                 console.print("[dim]Pensando respuesta con IA...[/dim]")
-                answer = generate_answer(index, query, mode="semantic", limit=current_limit, chapter_filter=current_chapter)
-                console.print(Panel(answer, title="[bold green]Respuesta RAG[/bold green]", border_style="green"))
+                answer = generate_answer(
+                    index,
+                    query,
+                    mode="semantic",
+                    limit=current_limit,
+                    chapter_filter=current_chapter,
+                )
+                console.print(
+                    Panel(
+                        answer,
+                        title="[bold green]Respuesta RAG[/bold green]",
+                        border_style="green",
+                    )
+                )
                 continue  # Si es RAG, ya hemos respondido, volvemos a pedir input al usuario
-            
+
             elif current_mode == "semantic":
-                results = search_semantic_passages(index, query, current_limit, current_chapter)
+                results = search_semantic_passages(
+                    index, query, current_limit, current_chapter
+                )
             else:
                 results = search_passages(index, query, current_limit, current_chapter)
 
@@ -389,9 +439,14 @@ def _run_interactive_session(
         if current_chapter:
             console.print(f"[bold]Filtro capitulo activo:[/bold] {current_chapter}")
         console.print()
-        
+
         # --- AQUÍ LE PASAMOS EL PARÁMETRO is_semantic ---
-        _print_results(query=query, results=results, max_chars=max_chars, is_semantic=(current_mode == "semantic"))
+        _print_results(
+            query=query,
+            results=results,
+            max_chars=max_chars,
+            is_semantic=(current_mode == "semantic"),
+        )
 
     console.print("[bold]Sesion finalizada.[/bold]")
 
@@ -434,7 +489,9 @@ def stats_command(
         raise typer.Exit(code=1) from exc
 
     passages = index.passages
-    avg_words = mean(len(p.text_normalized.split()) for p in passages) if passages else 0.0
+    avg_words = (
+        mean(len(p.text_normalized.split()) for p in passages) if passages else 0.0
+    )
     unique_chapters = len({p.chapter for p in passages if p.chapter})
 
     typer.echo("Estadísticas del índice")
@@ -497,15 +554,21 @@ def chapters_command(
         typer.echo(f"{idx:>3}. {_shorten(chapter_name, 140)} ({count} pasajes)")
 
 
-def _print_results(query: str, results: list[SearchResult], max_chars: int, is_semantic: bool = False) -> None:
+def _print_results(
+    query: str, results: list[SearchResult], max_chars: int, is_semantic: bool = False
+) -> None:
     if not results:
         console.print("[yellow]No se encontraron pasajes para esa consulta.[/yellow]")
         return
 
     for idx, result in enumerate(results, start=1):
-        chapter_label = _shorten(result.passage.chapter or "Sin capítulo detectado", 120)
-        excerpt = render_excerpt(result.passage.text_original, query=query, max_chars=max_chars)
-        
+        chapter_label = _shorten(
+            result.passage.chapter or "Sin capítulo detectado", 120
+        )
+        excerpt = render_excerpt(
+            result.passage.text_original, query=query, max_chars=max_chars
+        )
+
         if is_semantic:
             meta = f"similitud del coseno={result.score:.4f}"
         else:
@@ -513,7 +576,7 @@ def _print_results(query: str, results: list[SearchResult], max_chars: int, is_s
                 f"score={result.score:.2f} | exactas={result.exact_matches} "
                 f"| hits={result.total_term_hits}"
             )
-            
+
         content = Text()
         content.append(meta + "\n", style="dim")
         content.append_text(_excerpt_to_rich_text(excerpt))
@@ -552,16 +615,22 @@ def _print_interactive_help() -> None:
     help_table.add_row(
         "consulta libre",
         "Busca pasajes por lema (palabra o frase)",
-        "\"sancho panza\" o \"domingo\"",
+        '"sancho panza" o "domingo"',
     )
-    help_table.add_row("/mode TIPO", "Cambia el modo a classic, semantic o rag", "/mode rag")
+    help_table.add_row(
+        "/mode TIPO", "Cambia el modo a classic, semantic o rag", "/mode rag"
+    )
     help_table.add_row("/help", "Muestra esta ayuda", "/help")
     help_table.add_row("/limit N", "Define cuantos resultados ver (1..100)", "/limit 5")
-    help_table.add_row("/chapter TEXTO", "Filtra resultados por capitulo", "/chapter capitulo xxv")
+    help_table.add_row(
+        "/chapter TEXTO", "Filtra resultados por capitulo", "/chapter capitulo xxv"
+    )
     help_table.add_row("/chapter off", "Quita el filtro de capitulo", "/chapter off")
     help_table.add_row("/stats", "Muestra estado de la sesion", "/stats")
     help_table.add_row("exit | quit | salir", "Cierra la sesion", "exit")
-    console.print(Panel(help_table, title="[bold]Ayuda de sesion[/bold]", border_style="cyan"))
+    console.print(
+        Panel(help_table, title="[bold]Ayuda de sesion[/bold]", border_style="cyan")
+    )
     console.print()
 
 
@@ -572,21 +641,22 @@ def _print_quickstart_guide() -> None:
     quickstart.add_column("Que obtienes")
     quickstart.add_row(
         "Buscar un personaje",
-        "\"sancho panza\"",
+        '"sancho panza"',
         "Pasajes donde aparece Sancho Panza.",
     )
     quickstart.add_row(
         "Buscar a Dulcinea",
-        "\"dulcinea del toboso\"",
+        '"dulcinea del toboso"',
         "Dulcinea es el amor idealizado de Don Quijote.",
     )
     quickstart.add_row(
-        "Cambiar la magia de búsqueda", 
-        "/mode rag", 
-        "Activa la IA para generar respuestas (RAG).")
+        "Cambiar la magia de búsqueda",
+        "/mode rag",
+        "Activa la IA para generar respuestas (RAG).",
+    )
     quickstart.add_row(
         "Buscar una fecha o referencia temporal",
-        "\"domingo\"",
+        '"domingo"',
         "Pasajes con referencias temporales.",
     )
     quickstart.add_row(
@@ -619,7 +689,11 @@ def _print_quickstart_guide() -> None:
         "exit",
         "Finaliza la sesion interactiva.",
     )
-    console.print(Panel(quickstart, title="[bold]Cosas que puedes hacer[/bold]", border_style="cyan"))
+    console.print(
+        Panel(
+            quickstart, title="[bold]Cosas que puedes hacer[/bold]", border_style="cyan"
+        )
+    )
 
 
 def _print_interactive_stats(
@@ -637,7 +711,9 @@ def _print_interactive_stats(
     stats_table.add_row("Capitulos detectados", str(chapter_count))
     stats_table.add_row("Limite actual", str(current_limit))
     stats_table.add_row("Filtro capitulo", current_chapter or "ninguno")
-    console.print(Panel(stats_table, title="[bold]Estado de sesion[/bold]", border_style="cyan"))
+    console.print(
+        Panel(stats_table, title="[bold]Estado de sesion[/bold]", border_style="cyan")
+    )
     console.print()
 
 
@@ -661,5 +737,3 @@ def run() -> None:
         )
         return
     app()
-
-

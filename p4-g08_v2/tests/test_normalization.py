@@ -1,4 +1,4 @@
-﻿from quijote_app.utils import find_query_span, normalize_text, render_excerpt
+from quijote_app.utils import find_query_span, normalize_text, render_excerpt
 
 
 def test_normalize_text_case_accents_and_punctuation() -> None:

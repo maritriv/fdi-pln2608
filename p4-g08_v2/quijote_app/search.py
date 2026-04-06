@@ -13,6 +13,7 @@ from quijote_app.utils import normalize_text
 
 # --- BÚSQUEDA CLÁSICA ---
 
+
 def search_passages(
     index: PassageIndex,
     query: str,
@@ -39,7 +40,9 @@ def search_passages(
         for term, count in query_term_counts.items()
     }
 
-    chapter_filter_normalized = normalize_text(chapter_filter) if chapter_filter else None
+    chapter_filter_normalized = (
+        normalize_text(chapter_filter) if chapter_filter else None
+    )
     results: list[SearchResult] = []
 
     for passage in index.passages:
@@ -70,7 +73,9 @@ def _score_passage(
     term_profiles: dict[str, dict[str, float]],
 ) -> SearchResult | None:
     text = passage.text_normalized
-    passage_terms = list(passage.content_lemmas) if passage.content_lemmas else list(passage.lemmas)
+    passage_terms = (
+        list(passage.content_lemmas) if passage.content_lemmas else list(passage.lemmas)
+    )
 
     exact_matches = max(
         _count_exact_query_matches(text, normalized_full_query),
@@ -150,7 +155,9 @@ def _count_exact_lemma_matches(passage_terms: list[str], query_terms: list[str])
 
 
 def _minimum_cover_span(positions_by_term: dict[str, list[int]]) -> int | None:
-    matched_terms = {term: positions for term, positions in positions_by_term.items() if positions}
+    matched_terms = {
+        term: positions for term, positions in positions_by_term.items() if positions
+    }
     if len(matched_terms) < 2:
         return None
 
@@ -205,6 +212,7 @@ def _count_exact_query_matches(text: str, normalized_query: str) -> int:
 
 # --- BÚSQUEDA SEMÁNTICA ---
 
+
 def _cosine_similarity(v1: list[float], v2: list[float]) -> float:
     """Calcula la similitud del coseno entre dos vectores."""
     dot_product = sum(a * b for a, b in zip(v1, v2))
@@ -220,7 +228,7 @@ def search_semantic_passages(
     query: str,
     limit: int,
     chapter_filter: str | None = None,
-    model: str = "nomic-embed-text"
+    model: str = "nomic-embed-text",
 ) -> list[SearchResult]:
     """Busca pasajes usando embeddings y similitud del coseno."""
     normalized_query = normalize_text(query)
@@ -232,12 +240,16 @@ def search_semantic_passages(
         response = ollama.embeddings(model=model, prompt=normalized_query)
         query_embedding = response.get("embedding")
     except Exception as e:
-        raise RuntimeError(f"Error al conectar con Ollama para la búsqueda semántica: {e}")
+        raise RuntimeError(
+            f"Error al conectar con Ollama para la búsqueda semántica: {e}"
+        )
 
     if not query_embedding:
         raise RuntimeError("Ollama no devolvió un embedding válido para la consulta.")
 
-    chapter_filter_normalized = normalize_text(chapter_filter) if chapter_filter else None
+    chapter_filter_normalized = (
+        normalize_text(chapter_filter) if chapter_filter else None
+    )
     results: list[SearchResult] = []
 
     # 2. Comparamos el vector de la pregunta con todos los pasajes del índice
@@ -246,7 +258,7 @@ def search_semantic_passages(
             chapter_normalized = normalize_text(passage.chapter or "")
             if chapter_filter_normalized not in chapter_normalized:
                 continue
-        
+
         # Ignoramos los pasajes que por algún motivo no tengan embedding
         if not passage.embedding:
             continue

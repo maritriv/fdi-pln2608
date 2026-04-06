@@ -1,4 +1,4 @@
-﻿"""Construccion, persistencia y validacion del indice."""
+"""Construccion, persistencia y validacion del indice."""
 
 from __future__ import annotations
 
@@ -10,7 +10,11 @@ from pathlib import Path
 
 import ollama
 
-from quijote_app.config import DEFAULT_CACHE_DIR, MIN_WORDS_PER_PASSAGE, PIPELINE_VERSION
+from quijote_app.config import (
+    DEFAULT_CACHE_DIR,
+    MIN_WORDS_PER_PASSAGE,
+    PIPELINE_VERSION,
+)
 from quijote_app.corpus import load_corpus
 from quijote_app.models import PassageIndex, Passage
 from quijote_app.nlp import annotate_passages, compute_document_frequencies
@@ -18,6 +22,7 @@ from quijote_app.nlp import annotate_passages, compute_document_frequencies
 # Modelo de embeddings recomendado por defecto.
 DEFAULT_EMBEDDING_MODEL = "nomic-embed-text"
 MAX_EMBED_CHARS = 3000
+
 
 class IndexError(RuntimeError):
     """Error de carga/guardado de indice."""
@@ -31,7 +36,9 @@ def default_cache_path(source: Path, cache_dir: Path = DEFAULT_CACHE_DIR) -> Pat
     return cache_dir / f"index_{safe_stem}_{digest}.pkl"
 
 
-def _generate_embeddings(passages: list[Passage], model: str = DEFAULT_EMBEDDING_MODEL) -> None:
+def _generate_embeddings(
+    passages: list[Passage], model: str = DEFAULT_EMBEDDING_MODEL
+) -> None:
     """Genera y asigna embeddings a cada pasaje usando Ollama."""
     for passage in passages:
         try:
@@ -47,13 +54,15 @@ def _generate_embeddings(passages: list[Passage], model: str = DEFAULT_EMBEDDING
             response = ollama.embeddings(model=model, prompt=text_for_embedding)
             passage.embedding = response.get("embedding")
         except Exception as e:
-            print(f"Advertencia: No se pudo generar embedding para el pasaje {passage.passage_id}: {e}")
+            print(
+                f"Advertencia: No se pudo generar embedding para el pasaje {passage.passage_id}: {e}"
+            )
 
 
 def build_index(source: Path, min_words: int = MIN_WORDS_PER_PASSAGE) -> PassageIndex:
     """Construye indice desde corpus y precalcula representacion por lemas y embeddings."""
     metadata, passages = load_corpus(source=source, min_words=min_words)
-    
+
     # 1. Preprocesado Clásico (Lematización, Stopwords)
     enriched_passages = annotate_passages(passages)
     lemma_document_freq = compute_document_frequencies(enriched_passages)
@@ -128,9 +137,11 @@ def load_or_build_index(
 
     if use_cache and not force_rebuild and effective_cache.exists():
         cached_index = load_index(effective_cache)
-        
+
         # Validamos que la caché no solo sea válida, sino que también tenga los embeddings calculados
-        has_embeddings = bool(cached_index.passages) and all(passage.embedding is not None for passage in cached_index.passages)
+        has_embeddings = bool(cached_index.passages) and all(
+            passage.embedding is not None for passage in cached_index.passages
+        )
 
         if is_cache_valid(cached_index, source) and has_embeddings:
             return cached_index, True, effective_cache

@@ -122,7 +122,11 @@ def compute_document_frequencies(passages: Iterable[Passage]) -> dict[str, int]:
     """Calcula DF por lema usando terminos de contenido y fallback a lemas."""
     frequencies: Counter[str] = Counter()
     for passage in passages:
-        terms = set(passage.content_lemmas) if passage.content_lemmas else set(passage.lemmas)
+        terms = (
+            set(passage.content_lemmas)
+            if passage.content_lemmas
+            else set(passage.lemmas)
+        )
         for term in terms:
             frequencies[term] += 1
     return dict(frequencies)
