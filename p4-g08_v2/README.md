@@ -50,19 +50,55 @@ uv sync
 
 **2. Descargar el diccionario de español (por si spaCy no lo tiene):**
 ```bash
-uv run python -m spacy download es_core_news_sm
+uv run python -m spacy info es_core_news_sm --url
+uv pip install "<URL_DEVUELTA_POR_EL_COMANDO_ANTERIOR>"
 ```
 
-**3. Preparar Ollama (súper importante para los embeddings y el RAG):**
+**3. Preparar Ollama:**
 
-Asegúrate de tener Ollama abierto en tu ordenador. En otra pestaña de tu terminal, enciende el motor y descarga los modelos que usamos:
+Ollama debe estar **instalado y en ejecución** para poder usar la búsqueda semántica y el modo RAG.
 
+Como recomendación, en otra terminal diferente:
+
+**3.1. Descargar ollama en caso de no tenerlo:**
+
+En Windows:
 ```bash
-ollama serve
+irm https://ollama.com/install.ps1 | iex
+```
+
+En Linux/Mac:
+```bash
+curl -fsSL https://ollama.com/install.sh | sh
+```
+
+Para comprobar que está bien instalado, cierra la terminal y ejecuta:
+```bash
+ollama
+```
+
+**3.2 Descargar los modelos necesarios:**
+```bash
 ollama pull nomic-embed-text
 ollama pull llama3
 ```
 
+**3.3. Arrancar ollama en caso de que no esté ejecutando anteriormente:**
+
+En muchos sistemas Ollama se inicia automáticamente.
+
+Puedes comprobarlo con:
+```bash
+ollama list
+```
+
+Si no está activo, arráncalo con:
+```bash
+ollama serve
+```
+Si aparece un error indicando que el puerto ya está en uso, significa que Ollama ya está ejecutándose correctamente.
+
+```
 
 ---
 
@@ -102,9 +138,31 @@ Una vez dentro, puedes usar estos comandos:
 
 ---
 
+
+---
+
+## ❗ Problemas frecuentes
+
+Guía por si ocurre algún problema:
+
+### `ollama` no se reconoce
+- Asegúrate de haberlo instalado correctamente
+- Reinicia la terminal tras la instalación
+
+### Error con `ollama serve`
+- Si indica que el puerto está en uso, Ollama ya está funcionando
+
+### El modo semántico o RAG no funciona
+Comprueba:
+1. `ollama list`
+2. que los modelos están descargados
+3. que Ollama está activo
+
+--- 
+
 ## 📦 Entrega
 
-Hemos comprobado que el código está perfectamente formateado según pide la rúbrica ejecutando:
+El código está formateado con:
 
 ```bash
 uv format --check
