@@ -15,3 +15,8 @@ fdi-pln-2608-p1 = "pln.main:main"
 
 [tool.uv]
 package = true
+
+[tool.uv.workspace]
+members = [
+    "p5-g08",
+]
