@@ -35,7 +35,8 @@ class LanguageModelingDataset(Dataset):
     """
 
     def __init__(self, token_ids, seq_len):
-        self.token_ids = token_ids
+        # Convertimos a tensor aquí para que el entrenamiento sea más rápido
+        self.token_ids = torch.tensor(token_ids, dtype=torch.long)
         self.seq_len = seq_len
 
     def __len__(self):
@@ -46,18 +47,26 @@ class LanguageModelingDataset(Dataset):
         x = self.token_ids[idx : idx + self.seq_len]
         y = self.token_ids[idx + 1 : idx + self.seq_len + 1]
 
-        return torch.tensor(x, dtype=torch.long), torch.tensor(y, dtype=torch.long)
+        return x, y
 
 
-def build_tokenizer_and_dataset(resources_path, vocab_size, seq_len):
+def build_tokenizer_and_dataset(resources_path, vocab_size, seq_len, train_ratio=0.9):
     """Carga corpus, entrena tokenizer y construye dataset de entrenamiento."""
     text = load_corpus(resources_path)
 
     tokenizer = BPETokenizer(text, vocab_size=vocab_size)
     token_ids = tokenizer.encode(text)
 
-    dataset = LanguageModelingDataset(token_ids, seq_len=seq_len)
-    return tokenizer, dataset, text, token_ids
+    # --- CAMBIO AQUÍ: División de datos ---
+    split_idx = int(len(token_ids) * train_ratio)
+    train_ids = token_ids[:split_idx]
+    val_ids = token_ids[split_idx:]
+
+    train_dataset = LanguageModelingDataset(train_ids, seq_len=seq_len)
+    val_dataset = LanguageModelingDataset(val_ids, seq_len=seq_len)
+    
+    # Devolvemos ambos datasets
+    return tokenizer, train_dataset, val_dataset, text
 
 
 if __name__ == "__main__":

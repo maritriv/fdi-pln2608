@@ -119,6 +119,9 @@ class MiniLLM(nn.Module):
         # Cabeza de lenguaje: proyecta cada vector al tamaño del vocabulario
         self.lm_head = nn.Linear(d_model, vocab_size)
 
+        # Añadir weight tying: compartir pesos entre token_emb y lm_head (mejora la generalización y reduce el número de parámetros)
+        self.lm_head.weight = self.token_emb.weight # Nota: Esto solo funciona si d_model es igual al tamaño del embedding, que en nuestro caso lo es
+
     def forward(self, x, causal=True):
         # x tiene forma: (batch_size, n_tokens)
         batch_size, n_tokens = x.shape
