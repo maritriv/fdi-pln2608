@@ -67,7 +67,7 @@ def build_tokenizer_and_dataset(resources_path, vocab_size, seq_len, train_ratio
 
     train_dataset = LanguageModelingDataset(train_ids, seq_len=seq_len)
     val_dataset = LanguageModelingDataset(val_ids, seq_len=seq_len)
-    
+
     # Devolvemos ambos datasets
     return tokenizer, train_dataset, val_dataset, text
 

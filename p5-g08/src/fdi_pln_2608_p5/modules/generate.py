@@ -4,15 +4,15 @@ from fdi_pln_2608_p5.modules.model import MiniLLM
 
 
 def load_model_and_tokenizer(
-    checkpoint_path="checkpoints/mini_llm.pt",
+    model_path="checkpoints/p5_causal_26XX.pth",
     tokenizer_path="checkpoints/tokenizer.pt",
     device=None,
 ):
     if device is None:
         device = "cuda" if torch.cuda.is_available() else "cpu"
 
+    checkpoint = torch.load(model_path, map_location=device)
     tokenizer = torch.load(tokenizer_path, map_location=device)
-    checkpoint = torch.load(checkpoint_path, map_location=device)
 
     config = checkpoint["config"]
 
@@ -36,15 +36,16 @@ def generate_text(
     max_new_tokens=100,
     temperature=0.8,
     top_k=None,
-    checkpoint_path="checkpoints/mini_llm.pt",
+    model_path="checkpoints/p5_causal_26XX.pth",
     tokenizer_path="checkpoints/tokenizer.pt",
 ):
     model, tokenizer, _ = load_model_and_tokenizer(
-        checkpoint_path=checkpoint_path,
+        model_path=model_path,
         tokenizer_path=tokenizer_path,
     )
 
     prompt_ids = tokenizer.encode(prompt)
+
     generated_ids = model.generate(
         prompt_ids,
         max_tokens=max_new_tokens,

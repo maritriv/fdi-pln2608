@@ -1,5 +1,3 @@
-# Entrenamiento del mini LLM
-
 from pathlib import Path
 import time
 
@@ -11,14 +9,8 @@ from fdi_pln_2608_p5.modules.model import MiniLLM
 
 
 def run_epoch(model, dataloader, device, optimizer=None):
-    """Ejecuta una época de entrenamiento o validación."""
-
     is_train = optimizer is not None
-
-    if is_train:
-        model.train()
-    else:
-        model.eval()
+    model.train() if is_train else model.eval()
 
     total_loss = 0.0
 
@@ -55,18 +47,18 @@ def train_model(
     epochs=5,
     device=None,
     save_dir="checkpoints",
+    model_name="p5_causal_26XX.pth",
+    tokenizer_name="tokenizer.pt",
     resume=False,
 ):
-    """Entrena el mini LLM sobre el corpus indicado."""
-
     if device is None:
         device = "cuda" if torch.cuda.is_available() else "cpu"
 
     save_path = Path(save_dir)
     save_path.mkdir(parents=True, exist_ok=True)
 
-    checkpoint_file = save_path / "mini_llm.pt"
-    tokenizer_file = save_path / "tokenizer.pt"
+    checkpoint_file = save_path / model_name
+    tokenizer_file = save_path / tokenizer_name
 
     print(f"Usando dispositivo: {device}")
 
@@ -81,17 +73,8 @@ def train_model(
     print(f"Ejemplos de entrenamiento: {len(train_ds)}")
     print(f"Ejemplos de validación: {len(val_ds)}")
 
-    train_loader = DataLoader(
-        train_ds,
-        batch_size=batch_size,
-        shuffle=True,
-    )
-
-    val_loader = DataLoader(
-        val_ds,
-        batch_size=batch_size,
-        shuffle=False,
-    )
+    train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True)
+    val_loader = DataLoader(val_ds, batch_size=batch_size, shuffle=False)
 
     model = MiniLLM(
         vocab_size=len(tokenizer.vocab),
@@ -103,36 +86,20 @@ def train_model(
     ).to(device)
 
     optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)
-
     start_epoch = 1
 
     if resume and checkpoint_file.exists():
         checkpoint = torch.load(checkpoint_file, map_location=device)
-
         model.load_state_dict(checkpoint["model_state_dict"])
         optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
-
         start_epoch = checkpoint.get("epoch", 0) + 1
-
         print(f"Checkpoint cargado desde: {checkpoint_file}")
-        print(f"Continuando desde epoch {start_epoch}")
 
     t0 = time.time()
 
     for epoch in range(start_epoch, epochs + 1):
-        train_loss = run_epoch(
-            model=model,
-            dataloader=train_loader,
-            device=device,
-            optimizer=optimizer,
-        )
-
-        val_loss = run_epoch(
-            model=model,
-            dataloader=val_loader,
-            device=device,
-            optimizer=None,
-        )
+        train_loss = run_epoch(model, train_loader, device, optimizer)
+        val_loss = run_epoch(model, val_loader, device)
 
         elapsed = time.time() - t0
 
@@ -164,7 +131,7 @@ def train_model(
         torch.save(checkpoint, checkpoint_file)
         torch.save(tokenizer, tokenizer_file)
 
-    print(f"Modelo guardado en: {checkpoint_file}")
+    print(f"Modelo causal guardado en: {checkpoint_file}")
     print(f"Tokenizer guardado en: {tokenizer_file}")
 
     return model, tokenizer

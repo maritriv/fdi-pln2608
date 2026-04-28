@@ -239,17 +239,41 @@ def collate_ner(batch):
 
     return padded_x, padded_y
 
+
 def extract_named_entities(text):
     """Baseline simple de NER por mayúsculas.
 
-    Se usa cuando todavía no se ha entrenado un modelo NER.
+    Se conserva solo como alternativa auxiliar. La entrega final usa NERLLM.
     """
     import re
 
     stopwords = {
-        "The", "A", "An", "And", "But", "Or", "If", "Then", "When",
-        "While", "It", "He", "She", "They", "We", "I", "You", "This",
-        "That", "In", "On", "At", "For", "Of", "To", "From",
+        "The",
+        "A",
+        "An",
+        "And",
+        "But",
+        "Or",
+        "If",
+        "Then",
+        "When",
+        "While",
+        "It",
+        "He",
+        "She",
+        "They",
+        "We",
+        "I",
+        "You",
+        "This",
+        "That",
+        "In",
+        "On",
+        "At",
+        "For",
+        "Of",
+        "To",
+        "From",
     }
 
     pattern = r"\b(?:[A-Z][a-z]+)(?:\s+[A-Z][a-z]+)*\b"
@@ -267,6 +291,7 @@ def extract_named_entities(text):
             seen.add(candidate)
 
     return entities
+
 
 if __name__ == "__main__":
     example_words = ["Alice", "met", "the", "Queen", "in", "Wonderland"]

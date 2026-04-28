@@ -5,7 +5,13 @@ EXPERIMENTS = [
     {"name": "base", "d_model": 128, "n_heads": 4, "n_layers": 4, "dropout": 0.1},
     {"name": "small", "d_model": 64, "n_heads": 4, "n_layers": 2, "dropout": 0.1},
     {"name": "deeper", "d_model": 128, "n_heads": 4, "n_layers": 6, "dropout": 0.1},
-    {"name": "dropout_high", "d_model": 128, "n_heads": 4, "n_layers": 4, "dropout": 0.3},
+    {
+        "name": "dropout_high",
+        "d_model": 128,
+        "n_heads": 4,
+        "n_layers": 4,
+        "dropout": 0.3,
+    },
 ]
 
 
