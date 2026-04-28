@@ -6,7 +6,10 @@ from fdi_pln_2608_p5.modules.ner import extract_named_entities
 
 
 def main():
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        description="Práctica 5 PLN - Mini LLM causal y NER"
+    )
+
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     train_parser = subparsers.add_parser("train")
@@ -20,6 +23,7 @@ def main():
     train_parser.add_argument("--n-layers", type=int, default=4)
     train_parser.add_argument("--dropout", type=float, default=0.1)
     train_parser.add_argument("--lr", type=float, default=3e-4)
+    train_parser.add_argument("--resume", action="store_true")
 
     gen_parser = subparsers.add_parser("generate")
     gen_parser.add_argument("--prompt", type=str, default="Alice")
@@ -44,18 +48,21 @@ def main():
             n_layers=args.n_layers,
             dropout=args.dropout,
             learning_rate=args.lr,
+            resume=args.resume,
         )
 
     elif args.command == "generate":
-        print(generate_text(
+        text = generate_text(
             prompt=args.prompt,
             max_new_tokens=args.max_new_tokens,
             temperature=args.temperature,
             top_k=args.top_k,
-        ))
+        )
+        print(text)
 
     elif args.command == "ner":
-        print(extract_named_entities(args.text))
+        entities = extract_named_entities(args.text)
+        print(entities)
 
 
 if __name__ == "__main__":

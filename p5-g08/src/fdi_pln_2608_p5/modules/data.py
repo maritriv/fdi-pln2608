@@ -13,11 +13,11 @@ def load_corpus(resources_path):
     files_path = Path(resources_path)
     texts = []
 
-    if not texts:
-        raise FileNotFoundError(f"No se encontraron .txt en {resources_path}")
-
     for path in sorted(files_path.glob("*.txt")):
         texts.append(path.read_text(encoding="utf-8"))
+
+    if not texts:
+        raise FileNotFoundError(f"No se encontraron .txt en {resources_path}")
 
     return "\n\n".join(texts)
 
