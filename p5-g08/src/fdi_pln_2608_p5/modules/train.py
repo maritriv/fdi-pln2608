@@ -52,7 +52,7 @@ def train_model(
     resume=False,
 ):
     if device is None:
-        device = "cuda" if torch.cuda.is_available() else "cpu"
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     save_path = Path(save_dir)
     save_path.mkdir(parents=True, exist_ok=True)

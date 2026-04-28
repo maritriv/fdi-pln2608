@@ -10,7 +10,7 @@ dependencies = [
 ]
 
 [project.scripts]
-fdi-pln-2608-p5 = "fdi_pln_2608_p5.main:main"
+fdi-pln-26XX-p5 = "fdi_pln_2608_p5.main:main"
 
 [tool.uv]
 

@@ -89,6 +89,9 @@ def main():
     )
 
     args = parser.parse_args()
+    if args.command is None:
+        parser.print_help()
+        return
 
     if args.command == "train":
         train_model(
