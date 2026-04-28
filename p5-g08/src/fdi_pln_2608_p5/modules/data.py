@@ -13,6 +13,9 @@ def load_corpus(resources_path):
     files_path = Path(resources_path)
     texts = []
 
+    if not texts:
+        raise FileNotFoundError(f"No se encontraron .txt en {resources_path}")
+
     for path in sorted(files_path.glob("*.txt")):
         texts.append(path.read_text(encoding="utf-8"))
 
@@ -71,22 +74,20 @@ def build_tokenizer_and_dataset(resources_path, vocab_size, seq_len, train_ratio
 
 if __name__ == "__main__":
     resources_path = "resources"
-    vocab_size = 200
-    seq_len = 32
+    vocab_size = 300
+    seq_len = 128
 
-    tokenizer, dataset, text, token_ids = build_tokenizer_and_dataset(
+    tokenizer, train_dataset, val_dataset, text = build_tokenizer_and_dataset(
         resources_path=resources_path,
         vocab_size=vocab_size,
         seq_len=seq_len,
     )
 
-    print("Longitud del corpus (caracteres):", len(text))
+    print("Longitud del corpus:", len(text))
     print("Tamaño del vocabulario:", len(tokenizer.vocab))
-    print("Número total de tokens:", len(token_ids))
-    print("Número de ejemplos en dataset:", len(dataset))
+    print("Ejemplos train:", len(train_dataset))
+    print("Ejemplos val:", len(val_dataset))
 
-    x, y = dataset[0]
-    print("Forma de x:", x.shape)
-    print("Forma de y:", y.shape)
-    print("Primer x:", x.tolist())
-    print("Primer y:", y.tolist())
+    x, y = train_dataset[0]
+    print("Forma x:", x.shape)
+    print("Forma y:", y.shape)

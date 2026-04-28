@@ -2,28 +2,23 @@
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 from fdi_pln_2608_p5.modules.attention import Attention
 
 
 class FeedForward(nn.Module):
-    """Perceptrón multicapa posición a posición.
+    """Perceptrón multicapa posición a posición."""
 
-    Se aplica de forma independiente a cada token:
-    - expande la dimensión del embedding
-    - aplica no linealidad
-    - vuelve a proyectar a d_model
-
-    Esto añade capacidad de abstracción al bloque transformer.
-    """
-
-    def __init__(self, d_model, dropout):
+    def __init__(self, d_model, dropout, expansion=4):
         super().__init__()
 
+        hidden_dim = expansion * d_model
+
         self.net = nn.Sequential(
-            nn.Linear(d_model, 4 * d_model),
+            nn.Linear(d_model, hidden_dim),
             nn.GELU(),
-            nn.Linear(4 * d_model, d_model),
+            nn.Linear(hidden_dim, d_model),
             nn.Dropout(dropout),
         )
 
@@ -32,18 +27,9 @@ class FeedForward(nn.Module):
 
 
 class Block(nn.Module):
-    """Bloque transformer pre-norm.
+    """Bloque transformer pre-norm."""
 
-    Estructura:
-    1. LayerNorm
-    2. Self-attention
-    3. Conexión residual
-    4. LayerNorm
-    5. Feed-forward
-    6. Conexión residual
-    """
-
-    def __init__(self, d_model, n_heads, max_seq_len, dropout):
+    def __init__(self, d_model, n_heads, max_seq_len, dropout, expansion=4):
         super().__init__()
 
         self.ln1 = nn.LayerNorm(d_model)
@@ -55,29 +41,20 @@ class Block(nn.Module):
         )
 
         self.ln2 = nn.LayerNorm(d_model)
-        self.ff = FeedForward(d_model=d_model, dropout=dropout)
+        self.ff = FeedForward(
+            d_model=d_model,
+            dropout=dropout,
+            expansion=expansion,
+        )
 
     def forward(self, x, causal=True):
-        # Primer sub-bloque: atención + residual
         x = x + self.attn(self.ln1(x), causal=causal)
-
-        # Segundo sub-bloque: feed-forward + residual
         x = x + self.ff(self.ln2(x))
-
         return x
 
 
 class MiniLLM(nn.Module):
-    """Transformer decoder pequeño para modelado del lenguaje.
-
-    Entrada:
-    - ids de tokens con forma (batch_size, n_tokens)
-
-    Salida:
-    - logits con forma (batch_size, n_tokens, vocab_size)
-
-    Cada posición produce una distribución sobre el siguiente token.
-    """
+    """Transformer decoder pequeño para modelado del lenguaje causal."""
 
     def __init__(
         self,
@@ -87,20 +64,25 @@ class MiniLLM(nn.Module):
         n_layers,
         max_seq_len,
         dropout,
+        expansion=4,
     ):
         super().__init__()
+
+        if d_model % n_heads != 0:
+            raise ValueError("d_model debe ser divisible por n_heads")
 
         self.max_seq_len = max_seq_len
         self.vocab_size = vocab_size
         self.d_model = d_model
+        self.n_heads = n_heads
+        self.n_layers = n_layers
+        self.dropout = dropout
+        self.expansion = expansion
 
-        # Embeddings de tokens: convierten ids en vectores densos
         self.token_emb = nn.Embedding(vocab_size, d_model)
-
-        # Embeddings posicionales aprendidos
         self.pos_emb = nn.Embedding(max_seq_len, d_model)
+        self.drop = nn.Dropout(dropout)
 
-        # Pila de bloques transformer
         self.blocks = nn.ModuleList(
             [
                 Block(
@@ -108,22 +90,24 @@ class MiniLLM(nn.Module):
                     n_heads=n_heads,
                     max_seq_len=max_seq_len,
                     dropout=dropout,
+                    expansion=expansion,
                 )
                 for _ in range(n_layers)
             ]
         )
 
-        # Normalización final antes de proyectar al vocabulario
         self.ln_f = nn.LayerNorm(d_model)
 
-        # Cabeza de lenguaje: proyecta cada vector al tamaño del vocabulario
-        self.lm_head = nn.Linear(d_model, vocab_size)
+        # Head de lenguaje + weight tying con embeddings de entrada
+        self.lm_head = nn.Linear(d_model, vocab_size, bias=False)
+        self.lm_head.weight = self.token_emb.weight
 
-        # Añadir weight tying: compartir pesos entre token_emb y lm_head (mejora la generalización y reduce el número de parámetros)
-        self.lm_head.weight = self.token_emb.weight # Nota: Esto solo funciona si d_model es igual al tamaño del embedding, que en nuestro caso lo es
+    def forward(self, x, targets=None, causal=True):
+        """Devuelve (logits, loss).
 
-    def forward(self, x, causal=True):
-        # x tiene forma: (batch_size, n_tokens)
+        x: Tensor (batch_size, n_tokens)
+        targets: Tensor (batch_size, n_tokens), opcional
+        """
         batch_size, n_tokens = x.shape
 
         if n_tokens > self.max_seq_len:
@@ -132,32 +116,81 @@ class MiniLLM(nn.Module):
                 f"pero max_seq_len={self.max_seq_len}"
             )
 
-        # Creamos índices de posición: [0, 1, 2, ..., n_tokens-1]
         positions = torch.arange(n_tokens, device=x.device)
-
-        # Expandimos a todo el batch:
-        # (n_tokens,) -> (batch_size, n_tokens)
         positions = positions.unsqueeze(0).expand(batch_size, n_tokens)
 
-        # Sumamos embeddings de token + embeddings posicionales
         x = self.token_emb(x) + self.pos_emb(positions)
+        x = self.drop(x)
 
-        # Aplicamos los bloques transformer
         for block in self.blocks:
             x = block(x, causal=causal)
 
-        # Normalización final
         x = self.ln_f(x)
-
-        # Proyección final a logits sobre el vocabulario
         logits = self.lm_head(x)
 
-        return logits
+        if targets is None:
+            return logits, None
+
+        loss = F.cross_entropy(
+            logits.flatten(0, 1),
+            targets.flatten(),
+        )
+
+        return logits, loss
+
+    @torch.no_grad()
+    def generate(self, prompt, max_tokens=200, temperature=0.8, top_k=None):
+        """Genera tokens a partir de un prompt.
+
+        prompt: lista de ids de tokens.
+        max_tokens: número máximo de tokens a generar.
+        temperature: controla aleatoriedad.
+        top_k: limita el muestreo a los k tokens más probables.
+        """
+        if temperature <= 0:
+            raise ValueError("temperature debe ser mayor que 0")
+
+        if top_k is not None:
+            if top_k <= 0:
+                raise ValueError("top_k debe ser positivo")
+            top_k = min(top_k, self.vocab_size)
+
+        self.eval()
+
+        ventana = torch.tensor(
+            [prompt[-self.max_seq_len :]],
+            dtype=torch.long,
+            device=next(self.parameters()).device,
+        )
+
+        generados = []
+
+        for _ in range(max_tokens):
+            logits, _ = self(ventana, causal=True)
+            next_token_logits = logits[:, -1, :] / temperature
+
+            if top_k is not None:
+                values, _ = torch.topk(next_token_logits, top_k)
+                min_value = values[:, -1].unsqueeze(-1)
+
+                next_token_logits = torch.where(
+                    next_token_logits < min_value,
+                    torch.full_like(next_token_logits, float("-inf")),
+                    next_token_logits,
+                )
+
+            probs = F.softmax(next_token_logits, dim=-1)
+            next_token_id = torch.multinomial(probs, num_samples=1)
+
+            generados.append(next_token_id.item())
+
+            ventana = torch.cat([ventana, next_token_id], dim=1)
+            ventana = ventana[:, -self.max_seq_len :]
+
+        return generados
 
 
 if __name__ == "__main__":
-    # Prueba rápida del modelo
-
     batch_size = 2
     n_tokens = 8
     vocab_size = 100
@@ -167,8 +200,8 @@ if __name__ == "__main__":
     max_seq_len = 16
     dropout = 0.1
 
-    # Batch de ids aleatorios
     x = torch.randint(0, vocab_size, (batch_size, n_tokens))
+    y = torch.randint(0, vocab_size, (batch_size, n_tokens))
 
     model = MiniLLM(
         vocab_size=vocab_size,
@@ -179,7 +212,10 @@ if __name__ == "__main__":
         dropout=dropout,
     )
 
-    logits = model(x, causal=True)
+    logits, loss = model(x, targets=y, causal=True)
+    generated = model.generate(prompt=[1, 2, 3], max_tokens=10, top_k=5)
 
     print("Entrada:", x.shape)
     print("Logits:", logits.shape)
+    print("Loss:", loss.item())
+    print("Generados:", generated)

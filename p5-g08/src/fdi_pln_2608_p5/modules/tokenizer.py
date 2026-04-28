@@ -89,7 +89,7 @@ class BPETokenizer:
     def __repr__(self):
         """Representación más bonita del vocabulario."""
         pretty = [t.replace("\n", "\\n").replace(" ", "▁") for t in self.vocab]
-        return f"{len(self.vocab)} tokens: ['{"', '".join(pretty)}']"
+        return f"{len(self.vocab)} tokens: {pretty}"
 
 
 # Si ejecutamos este módulo directamente, probamos el tokenizador

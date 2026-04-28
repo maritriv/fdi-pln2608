@@ -22,6 +22,10 @@ class Attention(nn.Module):
 
     def __init__(self, d_model, n_heads, max_seq_len, dropout):
         super().__init__()
+
+        if d_model % n_heads != 0:
+            raise ValueError("d_model debe ser divisible por n_heads")
+        
         self.n_heads = n_heads
 
         # Distribuimos la dimensión del modelo entre el numero de cabezas
