@@ -58,12 +58,12 @@ El proceso de anotación se realizó de manera colaborativa entre los distintos 
 | json_03 | Carlota Salazar Martín |
 | json_04 | Bautista Pelossi Schweizer |
 | json_05 | Ignacio Ramírez Suárez |
-| json_06 | Bryan |
+| json_06 | Bryan Xavier Quilumba Farinango |
 | json_07 | Carlos Mantilla Mateos |
 | json_08 | Javier Martín Fuentes |
 | json_09 | João Francisco Sampaio Pereira |
 | json_10 | Yushan Yang Xu |
-| json_11 | María |
+| json_11 | María Romero Huertas |
 | json_12 | Marina Triviño de las Heras |
 | json_13 | Carmen Fernández González |
 
