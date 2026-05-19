@@ -1,18 +1,30 @@
 [project]
 name = "fdi_pln_2608_p5"
-version = "0.1.0"
-description = "LLM pequeñito para la práctica 5"
+version = "1.0.0"
+description = "Practica P5 de PLN: mini LLM Transformer causal y NER BIO"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "numpy>=2.4.4",
+    "click",
+    "dynaconf",
+    "loguru",
+    "numpy",
+    "python-dotenv",
+    "rich",
     "torch",
+    "typer",
 ]
 
 [project.scripts]
-fdi-pln-26XX-p5 = "fdi_pln_2608_p5.main:main"
+fdi-pln-2608-p5 = "fdi_pln_2608_p5.cli:main"
 
 [tool.uv]
+
+[tool.ruff]
+line-length = 88
+
+[tool.ruff.format]
+quote-style = "double"
 
 [build-system]
 requires = ["hatchling"]

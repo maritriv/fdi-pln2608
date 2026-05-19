@@ -46,6 +46,27 @@ def align_to_bpe(words, word_labels, tokenizer):
     return token_ids, token_labels
 
 
+def encode_words_with_spans(words, tokenizer):
+    """Codifica palabras y guarda que subtokens pertenecen a cada palabra."""
+
+    token_ids = []
+    word_spans = []
+    space_ids = tokenizer.encode(" ")
+
+    for i, word in enumerate(words):
+        if i > 0:
+            token_ids.extend(space_ids)
+
+        start = len(token_ids)
+        word_ids = tokenizer.encode(word)
+        token_ids.extend(word_ids)
+        end = len(token_ids)
+
+        word_spans.append((start, end))
+
+    return token_ids, word_spans
+
+
 def explain_alignment(words, word_labels, tokenizer):
     """Muestra cómo se alinean palabras y etiquetas BIO con los sub-tokens BPE."""
 
@@ -146,16 +167,13 @@ class NERLLM(MiniLLM):
 
         self.eval()
 
-        ids, _ = align_to_bpe(
-            words=words,
-            word_labels=["O"] * len(words),
-            tokenizer=tokenizer,
-        )
+        ids, word_spans = encode_words_with_spans(words, tokenizer)
 
         device = next(self.parameters()).device
+        offset = max(0, len(ids) - self.max_seq_len)
 
         input_ids = torch.tensor(
-            [ids[-self.max_seq_len :]],
+            [ids[offset:]],
             dtype=torch.long,
             device=device,
         )
@@ -164,31 +182,59 @@ class NERLLM(MiniLLM):
         pred_ids = logits.argmax(dim=-1)[0].tolist()
         pred_labels = [ID2LABEL[pred_id] for pred_id in pred_ids]
 
-        used_ids = input_ids[0].tolist()
-
         entities = []
-        i = 0
+        current_words = []
+        current_type = None
 
-        while i < len(used_ids):
-            label = pred_labels[i]
+        for word, (start, end) in zip(words, word_spans):
+            if end <= offset:
+                continue
 
-            if label.startswith("B-"):
+            start = max(start - offset, 0)
+            end = min(end - offset, len(pred_labels))
+            if start >= end:
+                continue
+
+            label = self._word_label(pred_labels[start:end])
+
+            if label == "O":
+                if current_words:
+                    entities.append((" ".join(current_words), current_type))
+                    current_words = []
+                    current_type = None
+                continue
+
+            entity_type = label[2:]
+
+            if label.startswith("B-") or current_type != entity_type:
+                if current_words:
+                    entities.append((" ".join(current_words), current_type))
+                current_words = [word]
                 entity_type = label[2:]
-                j = i + 1
-
-                while j < len(used_ids) and pred_labels[j] == f"I-{entity_type}":
-                    j += 1
-
-                entity_text = tokenizer.decode(used_ids[i:j]).strip()
-
-                if entity_text:
-                    entities.append((entity_text, entity_type))
-
-                i = j
+                current_type = entity_type
             else:
-                i += 1
+                current_words.append(word)
+
+        if current_words:
+            entities.append((" ".join(current_words), current_type))
 
         return entities
+
+    @staticmethod
+    def _word_label(subtoken_labels):
+        """Resume etiquetas de subtokens a una etiqueta BIO de palabra."""
+        counts = {}
+        for label in subtoken_labels:
+            if label == "O":
+                continue
+            entity_type = label[2:]
+            counts[entity_type] = counts.get(entity_type, 0) + 1
+
+        if counts:
+            entity_type = max(counts, key=counts.get)
+            return f"B-{entity_type}"
+
+        return "O"
 
 
 class NERDataset(Dataset):

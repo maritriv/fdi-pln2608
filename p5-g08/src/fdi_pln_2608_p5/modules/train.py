@@ -4,8 +4,14 @@ import time
 import torch
 from torch.utils.data import DataLoader
 
+from fdi_pln_2608_p5.checkpoint import (
+    load_checkpoint,
+    normalize_config,
+    save_checkpoint,
+)
 from fdi_pln_2608_p5.modules.data import build_tokenizer_and_dataset
 from fdi_pln_2608_p5.modules.model import MiniLLM
+from fdi_pln_2608_p5.utils import resolve_device, set_seed
 
 
 def run_epoch(model, dataloader, device, optimizer=None):
@@ -36,28 +42,33 @@ def run_epoch(model, dataloader, device, optimizer=None):
 
 def train_model(
     resources_path="resources",
-    vocab_size=300,
-    seq_len=128,
-    batch_size=64,
+    vocab_size=400,
+    seq_len=None,
+    context_size=128,
+    batch_size=32,
     d_model=128,
     n_heads=4,
     n_layers=4,
+    expansion=4,
     dropout=0.1,
     learning_rate=3e-4,
-    epochs=5,
+    epochs=8,
+    seed=42,
     device=None,
     save_dir="checkpoints",
-    model_name="p5_causal_26XX.pth",
+    model_name="p5_causal_2608.pth",
+    output_path=None,
     tokenizer_name="tokenizer.pt",
     resume=False,
 ):
-    if device is None:
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    set_seed(seed)
+    device = resolve_device(device)
+    context_size = seq_len if seq_len is not None else context_size
 
     save_path = Path(save_dir)
     save_path.mkdir(parents=True, exist_ok=True)
 
-    checkpoint_file = save_path / model_name
+    checkpoint_file = Path(output_path) if output_path else save_path / model_name
     tokenizer_file = save_path / tokenizer_name
 
     print(f"Usando dispositivo: {device}")
@@ -65,7 +76,7 @@ def train_model(
     tokenizer, train_ds, val_ds, text = build_tokenizer_and_dataset(
         resources_path=resources_path,
         vocab_size=vocab_size,
-        seq_len=seq_len,
+        seq_len=context_size,
     )
 
     print(f"Corpus cargado: {len(text)} caracteres")
@@ -81,17 +92,19 @@ def train_model(
         d_model=d_model,
         n_heads=n_heads,
         n_layers=n_layers,
-        max_seq_len=seq_len,
+        max_seq_len=context_size,
         dropout=dropout,
+        expansion=expansion,
     ).to(device)
 
     optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)
     start_epoch = 1
 
     if resume and checkpoint_file.exists():
-        checkpoint = torch.load(checkpoint_file, map_location=device)
+        checkpoint = load_checkpoint(checkpoint_file, map_location=device)
         model.load_state_dict(checkpoint["model_state_dict"])
-        optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+        if "optimizer_state_dict" in checkpoint:
+            optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
         start_epoch = checkpoint.get("epoch", 0) + 1
         print(f"Checkpoint cargado desde: {checkpoint_file}")
 
@@ -110,25 +123,42 @@ def train_model(
             f"tiempo={elapsed:.1f}s"
         )
 
-        checkpoint = {
-            "epoch": epoch,
-            "model_state_dict": model.state_dict(),
-            "optimizer_state_dict": optimizer.state_dict(),
-            "config": {
+        config = normalize_config(
+            {
+                "task": "causal_lm",
                 "vocab_size": len(tokenizer.vocab),
-                "seq_len": seq_len,
+                "context_size": context_size,
                 "batch_size": batch_size,
                 "d_model": d_model,
                 "n_heads": n_heads,
                 "n_layers": n_layers,
+                "expansion": expansion,
                 "dropout": dropout,
-                "learning_rate": learning_rate,
-            },
+                "lr": learning_rate,
+                "epochs": epochs,
+            }
+        )
+        metrics = {
+            "epoch": epoch,
             "train_loss": train_loss,
             "val_loss": val_loss,
+            "elapsed_seconds": elapsed,
         }
 
-        torch.save(checkpoint, checkpoint_file)
+        save_checkpoint(
+            checkpoint_file,
+            model_state_dict=model.state_dict(),
+            tokenizer=tokenizer,
+            config=config,
+            metrics=metrics,
+            seed=seed,
+            extra={
+                "epoch": epoch,
+                "optimizer_state_dict": optimizer.state_dict(),
+                "train_loss": train_loss,
+                "val_loss": val_loss,
+            },
+        )
         torch.save(tokenizer, tokenizer_file)
 
     print(f"Modelo causal guardado en: {checkpoint_file}")

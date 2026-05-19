@@ -4,7 +4,14 @@ import time
 import torch
 from torch.utils.data import DataLoader, random_split
 
+from fdi_pln_2608_p5.checkpoint import (
+    load_checkpoint,
+    normalize_config,
+    save_checkpoint,
+)
+from fdi_pln_2608_p5.evaluate import evaluate_ner_dataloader
 from fdi_pln_2608_p5.modules.ner import NERDataset, NERLLM, NUM_LABELS, collate_ner
+from fdi_pln_2608_p5.utils import resolve_device, set_seed
 
 
 def load_ner_data(path):
@@ -76,41 +83,53 @@ def run_ner_epoch(model, dataloader, device, optimizer=None):
 
             total_loss += loss.item()
 
-    return total_loss / len(dataloader)
+    return total_loss / max(1, len(dataloader))
 
 
 def train_ner_model(
     ner_data_path,
-    causal_model_path="checkpoints/p5_causal_26XX.pth",
-    tokenizer_path="checkpoints/tokenizer.pt",
-    save_path="checkpoints/p5_ner_26XX.pth",
+    causal_model_path="checkpoints/p5_causal_2608.pth",
+    tokenizer_path=None,
+    save_path="checkpoints/p5_ner_2608.pth",
     batch_size=16,
     epochs=10,
     learning_rate=3e-4,
     train_ratio=0.9,
+    seed=42,
     device=None,
 ):
-    if device is None:
-        device = "cuda" if torch.cuda.is_available() else "cpu"
+    set_seed(seed)
+    device = resolve_device(device)
 
     print(f"Usando dispositivo: {device}")
 
-    tokenizer = torch.load(tokenizer_path, map_location=device)
-    causal_checkpoint = torch.load(causal_model_path, map_location=device)
-    config = causal_checkpoint["config"]
+    causal_checkpoint = load_checkpoint(causal_model_path, map_location=device)
+    tokenizer = causal_checkpoint.get("tokenizer")
+    if tokenizer is None:
+        if tokenizer_path is None:
+            raise ValueError(
+                "El checkpoint causal no contiene tokenizer; indica --tokenizer-path."
+            )
+        tokenizer = load_checkpoint(tokenizer_path, map_location=device)
+    config = normalize_config(causal_checkpoint["config"])
 
     ner_data = load_ner_data(ner_data_path)
 
     dataset = NERDataset(
         ner_data=ner_data,
         tokenizer=tokenizer,
-        max_len=config["seq_len"],
+        max_len=config["context_size"],
     )
 
-    train_size = int(len(dataset) * train_ratio)
+    train_size = max(1, int(len(dataset) * train_ratio))
     val_size = len(dataset) - train_size
+    if val_size == 0:
+        train_size = len(dataset)
 
-    train_ds, val_ds = random_split(dataset, [train_size, val_size])
+    generator = torch.Generator().manual_seed(seed)
+    train_ds, val_ds = random_split(
+        dataset, [train_size, val_size], generator=generator
+    )
 
     train_loader = DataLoader(
         train_ds,
@@ -128,12 +147,13 @@ def train_ner_model(
 
     model = NERLLM(
         vocab_size=config["vocab_size"],
-        max_seq_len=config["seq_len"],
+        max_seq_len=config["context_size"],
         d_model=config["d_model"],
         n_heads=config["n_heads"],
         n_layers=config["n_layers"],
         dropout=config["dropout"],
         num_labels=NUM_LABELS,
+        expansion=config.get("expansion", 4),
     ).to(device)
 
     missing, unexpected = model.load_state_dict(
@@ -148,10 +168,13 @@ def train_ner_model(
     optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)
 
     t0 = time.time()
+    metrics = {}
 
     for epoch in range(1, epochs + 1):
         train_loss = run_ner_epoch(model, train_loader, device, optimizer)
-        val_loss = run_ner_epoch(model, val_loader, device)
+        val_loss = (
+            run_ner_epoch(model, val_loader, device) if val_size else float("nan")
+        )
 
         elapsed = time.time() - t0
 
@@ -161,17 +184,48 @@ def train_ner_model(
             f"ner_val_loss={val_loss:.4f} | "
             f"tiempo={elapsed:.1f}s"
         )
+        metrics = {
+            "epoch": epoch,
+            "train_loss": train_loss,
+            "val_loss": val_loss,
+            "elapsed_seconds": elapsed,
+            "token_accuracy": None,
+            "token_precision": None,
+            "token_recall": None,
+            "token_f1": None,
+            "entity_precision": None,
+            "entity_recall": None,
+            "entity_f1": None,
+        }
+
+        if val_size:
+            metrics.update(evaluate_ner_dataloader(model, val_loader, device))
 
     save_path = Path(save_path)
     save_path.parent.mkdir(parents=True, exist_ok=True)
 
-    torch.save(
+    ner_config = normalize_config(
         {
-            "model_state_dict": model.state_dict(),
-            "config": config,
+            **config,
+            "task": "ner_bio",
             "num_labels": NUM_LABELS,
-        },
+            "batch_size": batch_size,
+            "lr": learning_rate,
+            "epochs": epochs,
+        }
+    )
+
+    save_checkpoint(
         save_path,
+        model_state_dict=model.state_dict(),
+        tokenizer=tokenizer,
+        config=ner_config,
+        metrics=metrics,
+        seed=seed,
+        extra={
+            "num_labels": NUM_LABELS,
+            "causal_checkpoint": str(causal_model_path),
+        },
     )
 
     print(f"Modelo NER guardado en: {save_path}")

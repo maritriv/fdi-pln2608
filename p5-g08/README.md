@@ -1,164 +1,281 @@
-# Práctica 5 - Mini LLM causal + NER
+# P5: Toves, Borogoves & Mome Raths
 
-## Objetivo
+Practica 5 de Procesamiento del Lenguaje Natural. El proyecto implementa desde
+cero un mini LLM basado en Transformers para generacion causal de texto y
+reutiliza su backbone preentrenado para NER con etiquetado BIO.
 
-Implementar desde cero un pequeño modelo de lenguaje (LLM) basado en Transformer, entrenarlo para generación de texto y reutilizar su arquitectura para resolver una tarea de reconocimiento de entidades nombradas (NER).
+## Integrantes
 
----
+- Marina Trivino de las Heras
+- Carlota Salazar Martin
 
-## Funcionalidades
+## Arquitectura
 
-El proyecto incluye:
+El repositorio separa las piezas principales del sistema:
 
-- Implementación completa de un Transformer decoder:
-  - Atención multi-cabezal causal
-  - Feed-forward
-  - LayerNorm (pre-norm)
-- Tokenizador BPE entrenado desde texto
-- Entrenamiento de modelo causal (language modeling)
-- Generación de texto
-- Modelo NER basado en el mismo backbone
-- Entrenamiento específico para NER
-- Predicción de entidades desde texto o fichero
+- `tokenizer.py`: tokenizador BPE entrenado sobre el corpus.
+- `attention.py`: scaled multi-head self-attention con mascara causal opcional.
+- `transformer.py`: embeddings de token y posicion, bloques Transformer pre-norm,
+  residuales, LayerNorm, GELU y dropout.
+- `causal_llm.py`: modelo causal con `lm_head` y weight tying.
+- `ner_llm.py`: modelo BIO que reutiliza el Transformer y cambia la cabeza final.
+- `checkpoint.py`: checkpoints autocontenidos con pesos, tokenizador, config,
+  metricas y semilla.
+- `cli.py`: comandos reproducibles de entrenamiento e inferencia.
 
----
+La implementacion interna se mantiene en `src/fdi_pln_2608_p5/modules/` y la
+raiz del paquete ofrece fachadas con nombres estables para una lectura mas clara.
 
-## Estructura del proyecto
+## Instalacion
+
 ```bash
-fdi_pln_2608_p5/
-│
-├── modules/
-│ ├── attention.py # Multi-head attention
-│ ├── model.py # MiniLLM (Transformer)
-│ ├── tokenizer.py # BPE tokenizer
-│ ├── data.py # Dataset LM
-│ ├── train.py # Entrenamiento modelo causal
-│ ├── generate.py # Generación de texto
-│ ├── ner.py # Modelo NER + dataset
-│ ├── train_ner.py # Entrenamiento NER
-│ ├── ner_predict.py # Inferencia NER
-│ └── experiments.py # Experimentos (opcional)
-│
-├── resources/ # Corpus y datos
-├── checkpoints/ # Modelos entrenados
-├── main.py # CLI principal
-└── README.md
+uv sync
 ```
 
+El proyecto usa solo dependencias permitidas en la practica: `torch`, `numpy`,
+`click`, `typer`, `loguru`, `rich`, `dynaconf` y `python-dotenv`.
 
----
-
-## Instalación y ejecución
-
-El proyecto está preparado para ejecutarse con `uv`.
-
-También esta formateado con:
+## Comandos principales
 
 ```bash
-uv format
-uv format --check
+uv run fdi-pln-2608-p5 --help
+uv run fdi-pln-2608-p5 train-causal --help
+uv run fdi-pln-2608-p5 train-ner --help
+uv run fdi-pln-2608-p5 generate --help
+uv run fdi-pln-2608-p5 ner --help
+uv run fdi-pln-2608-p5 eval-ner --help
+uv run fdi-pln-2608-p5 analyze-bpe --help
+uv run fdi-pln-2608-p5 experiment-generate --help
 ```
 
-## Entrenamiento del modelo causal
+## Entrenamiento causal
 
-Entrena el modelo de lenguaje:
+Configuracion CPU-friendly por defecto:
+
+- `vocab_size=400`
+- `context_size=128`
+- `d_model=128`
+- `n_heads=4`
+- `n_layers=4`
+- `expansion=4`
+- `dropout=0.1`
+- `batch_size=32`
+- `lr=3e-4`
+- `epochs=8`
+- `seed=42`
 
 ```bash
-uv run fdi-pln-2608-p5 train --resources resources --epochs 5
+uv run fdi-pln-2608-p5 train-causal \
+  --corpus resources \
+  --output checkpoints/p5_causal_2608.pth
 ```
 
-Salida:
-
-- `checkpoints/p5_causal_26XX.pth`
-- `checkpoints/tokenizer.pt`
-
-## Generación de texto
+Para una prueba mas rapida en CPU:
 
 ```bash
-uv run fdi-pln-2608-p5 generate --prompt "Alice was" --max-new-tokens 100  --top-k 20
+uv run fdi-pln-2608-p5 train-causal \
+  --corpus resources \
+  --output checkpoints/p5_causal_2608.pth \
+  --context-size 64 \
+  --n-layers 3 \
+  --epochs 5
 ```
 
-Parámetros importantes:
+## Generacion
 
-- `temperature`: controla aleatoriedad
-- `top-k`: limita vocabulario
+El checkpoint causal contiene tokenizador, configuracion, pesos, metricas y
+semilla. Por eso la inferencia solo necesita `--weights`:
 
-## Entrenamiento del modelo NER
-
-Se entrena reutilizando el modelo causal:
 ```bash
-uv run fdi-pln-2608-p5 train-ner --ner-data resources/ner_train.tsv --epochs 10
+uv run fdi-pln-2608-p5 generate \
+  --weights checkpoints/p5_causal_2608.pth \
+  --prompt "Alice was" \
+  --max-new-tokens 80 \
+  --top-k 20
 ```
 
-Salida:
+`temperature` regula la aleatoriedad del muestreo. Valores bajos como `0.5`
+hacen la salida mas conservadora; valores altos como `1.2` exploran mas.
 
-- `checkpoints/p5_ner_26XX.pth`
+## Entrenamiento NER
 
-## Detección de entidades nombradas
-**Desde texto**
+El modelo NER carga el checkpoint causal, reutiliza embeddings y bloques
+Transformer, y sustituye la cabeza de lenguaje por una cabeza BIO por token.
 
 ```bash
-uv run fdi-pln-2608-p5 ner --text "Alice met the Queen in Wonderland"
+uv run fdi-pln-2608-p5 train-ner \
+  --data data/ner/final.conll \
+  --causal-weights checkpoints/p5_causal_2608.pth \
+  --output checkpoints/p5_ner_2608.pth
 ```
 
-**Desde fichero:**
-```bash
-uv run fdi-pln-2608-p5 ner --file ejemplo.txt
-```
+Formato CoNLL esperado:
 
-## Formato de datos NER
-
-Formato esperado (tipo CoNLL):
-```bash
+```text
 Alice B-PER
 met O
 the O
 Queen B-PER
-
-Wonderland B-LOCç
-
+in O
+Wonderland B-LOC
 ```
 
-## Decisiones de diseño
+Las etiquetas implementadas son `O`, `B-PER`, `I-PER`, `B-LOC` e `I-LOC`.
 
-- Se usa arquitectura Transformer decoder (modelo causal)
-- Weight tying entre embeddings y salida
-- Atención causal para generación
-- Atención bidireccional para NER
-- Tokenización BPE aprendida del corpus
-- Reutilización del backbone para NER
+## Extraccion NER
 
----
+```bash
+uv run fdi-pln-2608-p5 ner \
+  --weights checkpoints/p5_ner_2608.pth \
+  --file examples/text.txt
+```
 
-## Experimentos (opcional)
+Tambien se puede pasar texto directo:
 
-Se han probado diferentes configuraciones:
+```bash
+uv run fdi-pln-2608-p5 ner \
+  --weights checkpoints/p5_ner_2608.pth \
+  --text "Alice met the Queen in Wonderland"
+```
 
-- Modelos más profundos
-- Distintos tamaños de embedding
-- Distinto dropout
+## Evaluacion NER
 
----
+El comando `eval-ner` carga un checkpoint NER autocontenido, lee un fichero
+CoNLL/BIO y calcula metricas sin dependencias externas:
 
-## Resultados
+- token accuracy
+- token precision, recall y F1, excluyendo la clase `O`
+- entity precision, recall y F1 con coincidencia exacta BIO
 
-- El modelo es capaz de generar texto coherente basado en el corpus
-- El modelo NER detecta entidades con arquitectura compartida
-- Se observa mejora al aumentar capas o entrenamiento
+```bash
+uv run fdi-pln-2608-p5 eval-ner \
+  --weights checkpoints/p5_ner_2608.pth \
+  --data data/ner/final.conll
+```
 
----
+Durante `train-ner`, si existe particion de validacion, estas metricas tambien
+se guardan dentro del checkpoint en el campo `metrics`.
 
-## Archivos entregados
+## Analisis BPE
 
-- `fdi_pln_26XX_p5-1.0-py3-none-any.whl`
-- `p5_causal_26XX.pth`
-- `p5_ner_26XX.pth`
+Para justificar la tokenizacion en el informe:
+
+```bash
+uv run fdi-pln-2608-p5 analyze-bpe \
+  --weights checkpoints/p5_causal_2608.pth \
+  --text "Alice went to Wonderland"
+```
+
+Tambien acepta ficheros:
+
+```bash
+uv run fdi-pln-2608-p5 analyze-bpe \
+  --weights checkpoints/p5_causal_2608.pth \
+  --file examples/text.txt
+```
+
+El comando muestra ids, piezas decodificadas, numero de caracteres, numero de
+tokens, ratio caracteres/tokens y una segmentacion legible.
+
+## Experimentos de generacion
+
+El comando `experiment-generate` no entrena nada. Ejecuta una rejilla pequena
+con `temperature` en `0.5, 0.8, 1.2` y `top-k` en `10, 20, 50`, y guarda un
+markdown para completar manualmente:
+
+```bash
+uv run fdi-pln-2608-p5 experiment-generate \
+  --weights checkpoints/p5_causal_2608.pth \
+  --prompt "Alice was" \
+  --out reports/generation_experiments.md
+```
+
+## Checkpoints
+
+Los checkpoints finales deben llamarse:
+
+- `checkpoints/p5_causal_2608.pth`
+- `checkpoints/p5_ner_2608.pth`
+
+Formato:
+
+```python
+{
+    "model_state_dict": ...,
+    "tokenizer": ...,
+    "config": ...,
+    "metrics": ...,
+    "seed": 42,
+}
+```
+
+Esto permite reconstruir el modelo sin depender de un fichero externo de
+tokenizador. Se conserva compatibilidad con checkpoints antiguos mediante
+`--tokenizer-path` si hiciera falta.
+
+## Decisiones tecnicas
+
+La atencion calcula `Q`, `K` y `V` con una proyeccion lineal compartida y despues
+divide la representacion en cabezas. La matriz de atencion usa el producto
+`Q @ K.T`; se divide por `sqrt(head_dim)` para evitar logits demasiado grandes,
+que saturarian la softmax y producirian gradientes poco utiles.
+
+La softmax transforma los logits de atencion en pesos positivos que suman 1, de
+modo que cada vector de contexto es una combinacion ponderada de los `values`.
+
+En generacion se usa `causal=True` para impedir que una posicion mire tokens
+futuros. En NER se usa `causal=False` porque la etiqueta de una palabra puede
+depender tanto del contexto izquierdo como del derecho.
+
+El alineamiento palabra -> BPE replica la etiqueta BIO de cada palabra sobre sus
+subtokens. Si una palabra `B-LOC` se divide en varias piezas, la primera conserva
+`B-LOC` y las siguientes reciben `I-LOC`.
+
+## Reproducibilidad
+
+Los entrenamientos fijan `seed=42` por defecto para Python, NumPy y PyTorch.
+Cada checkpoint guarda la semilla, la configuracion completa y las metricas del
+ultimo epoch. El dispositivo por defecto es CPU para que la practica sea
+reproducible sin GPU.
+
+## Limitaciones CPU
+
+El corpus y el modelo son pequenos por diseno. En CPU conviene empezar con
+`context_size=64`, `n_layers=3` y `epochs=5` para validar el flujo completo. La
+configuracion base mejora capacidad, pero tarda mas y puede requerir paciencia.
+
+## Experimentos recomendados
+
+El informe debe comparar:
+
+- `vocab_size`: 200 vs 400 vs 600
+- `context_size`: 64 vs 128
+- `n_layers`: 2 vs 4
+- `dropout`: 0.0 vs 0.1
+- `temperature`: 0.5 vs 0.8 vs 1.2
+
+Para cada experimento se recomienda guardar perdida de entrenamiento,
+perdida de validacion, ejemplos generados y una interpretacion breve.
+
+## Formato, build y release
+
+```bash
+uv format --check
+uv build
+```
+
+El wheel esperado para la release `p5v1.0` es:
+
+```text
+dist/fdi_pln_2608_p5-1.0.0-py3-none-any.whl
+```
+
+## Entrega final
+
+La entrega debe incluir:
+
 - `README.md`
-
----
-
-## Autores
-
-- Marina Triviño de las Heras
-- Carlota Salazar Martín
-
+- `reports/informe_2608.md`
+- `checkpoints/p5_causal_2608.pth`
+- `checkpoints/p5_ner_2608.pth`
+- `dist/fdi_pln_2608_p5-1.0.0-py3-none-any.whl`
