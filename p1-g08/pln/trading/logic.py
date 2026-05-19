@@ -1,3 +1,10 @@
+"""Lógica principal de negociación y ejecución de trueques.
+
+Este módulo decide cuándo aceptar ofertas, cuándo completar ofertas
+pendientes y cuándo enviar cartas de confirmación. Mantiene la lógica
+separada de la comunicación HTTP, que está en `pln.api.client`.
+"""
+
 from pln.logger import log
 from pln.state import PAQUETES_ENVIADOS, OFERTAS_PENDIENTES
 from pln.nlp.normalize import (

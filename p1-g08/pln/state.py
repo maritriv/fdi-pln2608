@@ -1,6 +1,7 @@
-"""
-Estructuras de estado global del bot.
-Mantienen memoria entre iteraciones del bucle principal.
+"""Estado global del agente.
+
+Estas estructuras mantienen memoria entre iteraciones del bucle principal:
+cooldown de mensajes, paquetes ya enviados y ofertas pendientes.
 """
 
 # Registro de último envío por destinatario.
