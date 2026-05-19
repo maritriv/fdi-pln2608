@@ -1,421 +1,162 @@
-# Butler Trading Agent — PLN
+# Butler Trading Agent — PLN (Grupo 08)
 
+--------------
 ## Descripción
 
-Este proyecto implementa un agente autónomo para la práctica **“Los agentes de Butler”**
-de la asignatura de Procesamiento del Lenguaje Natural.
+Este repositorio contiene la implementación de un **agente autónomo de negociación e intercambio de recursos** desarrollado para la práctica _"Los agentes de Butler"_ en la asignatura de Procesamiento del Lenguaje Natural (Grado en Ingeniería de Datos e Inteligencia Artificial, UCM).
 
-El agente participa en un entorno multiagente de trueque de recursos,
-interactuando mediante cartas y envío de paquetes a través del servidor Butler.
+El agente está diseñado para cohabitar en un entorno multiagente competitivo y dinámico. Su objetivo principal es interactuar con otros agentes mediante el envío de cartas (negociación) y paquetes (bienes) a través de un servidor central (Butler) para maximizar el progreso hacia sus propios objetivos de inventario.
 
-La arquitectura combina:
 
-- reglas deterministas,
-- parsing mediante expresiones regulares,
-- extracción semántica mediante LLM local (Ollama),
-- control de estado interno,
-- mecanismos anti-spam y anti-duplicados.
+-------------------------------------------
+## Filosofía de Diseño y Estrategia Híbrida
 
-El objetivo del agente es maximizar el progreso hacia sus objetivos
-de recursos realizando intercambios beneficiosos con otros agentes.
+A diferencia de los enfoques puramente deterministas o completamente basados en LLMs, este proyecto destaca por una arquitectura híbrida de tres niveles. El modelo de lenguaje local (Qwen2.5-VL / Qwen3-VL de 8B vía Ollama) no toma decisiones estratégicas directas; en su lugar, actúa como un extractor semántico avanzado.
 
----
+La lógica de negocio y la toma de decisiones financieras permanecen blindadas bajo reglas deterministas en código Python. Cuando llega una carta, el agente activa un pipeline de procesamiento lingüístico en cascada:
 
-## Estrategia híbrida
+```
+📥 Carta Recibida
+       │
+       ▼
+┌─────────────────────────────┐
+│ 1. Parsing Estructurado    │ ──(¿Formato OFERTA_V1?)──► [Aceptado/Procesado]
+└─────────────────────────────┘
+       │ No
+       ▼
+┌─────────────────────────────┐
+│ 2. Extracción Regex         │ ──(¿Patrón 1x1 match?)──► [Aceptado/Procesado]
+└─────────────────────────────┘
+       │ No
+       ▼
+┌─────────────────────────────┐
+│ 3. Inferencia Semántica LLM │ ──(Ollama Inferencia)───► Extract: {quiere, ofrece}
+└─────────────────────────────┘
+```
 
-El sistema utiliza una estrategia híbrida compuesta por tres niveles
-de interpretación de mensajes:
+Esta estrategia garantiza cuatro ventajas críticas en el sistema:
 
-1. Parsing estructurado (`OFERTA_V1`)
-2. Extracción mediante expresiones regulares
-3. Interpretación semántica mediante LLM local
+- **Robustez Extrema**: Tolerancia absoluta a mensajes con lenguaje natural ambiguo, informal o mal formateado.
 
-Esto permite:
+- **Eficiencia Computacional**: Si un agente competidor envía un formato estructurado, el pipeline lo procesa instantáneamente mediante Regex, evitando el coste temporal de una llamada al LLM.
 
-- robustez frente a mensajes mal formados,
-- compatibilidad entre agentes,
-- tolerancia a lenguaje natural flexible,
-- reducción de errores de interpretación.
+- **Seguridad Operacional**: Al delegar la lógica de aceptación ("¿me conviene este trato?") a funciones deterministas basadas en matrices de inventario, eliminamos por completo el riesgo de alucinación del modelo.
 
-El modelo LLM no toma decisiones estratégicas directamente;
-su función se limita a extraer información estructurada
-a partir de cartas escritas en lenguaje natural.
 
----
-
-## Diseño modular
-
-El sistema sigue una arquitectura modular en la que cada componente tiene una responsabilidad claramente definida. La comunicación con el servidor Butler, la lógica de negociación, el procesamiento lingüístico, la gestión del estado interno y la estrategia principal del agente se encuentran separados en módulos independientes.
-
-Esta organización permite mantener el código más limpio y mantenible, facilita la depuración y reutilización de componentes, y hace posible ampliar o modificar el comportamiento del agente sin afectar al resto del sistema.
----
-
-## Estructura general del repositorio
-
-```text
-fdi-pln2608/
-├── pln/
-│
-├── api/                  # Comunicación con Butler
-│   └── client.py
-│
-├── nlp/                  # Procesamiento de lenguaje natural
-│   ├── llm.py
+-----------------------------------
+## Arquitectura Modular del Sistema
+El proyecto se rige por el principio de separación de responsabilidades, dividiendo el sistema en módulos independientes localizados dentro del paquete `pln/`:
+```
+pln/
+├── api/          # Capa de transporte y red. Gestiona las peticiones HTTP (GET/POST) 
+│   └── client.py # contra los endpoints del servidor Butler (/info, /carta, /paquete).
+├── nlp/          # Core de procesamiento lingüístico. Contiene las funciones de sanitización,
+│   ├── llm.py    # normalización sintáctica, reglas regex y la interfaz con la API de Ollama.
 │   ├── normalize.py
 │   └── parse.py
-│
-├── trading/              # Lógica de negociación
-│   ├── logic.py
+├── trading/      # Motor financiero y de negociación. Valida la viabilidad de los trueques,
+│   ├── logic.py  # controla los duplicados de transacciones y gestiona las ofertas activas.
 │   └── offers.py
-│
-├── config.py             # Configuración global
-├── game.py               # Estrategia auxiliar
-├── logger.py             # Sistema de logging
-├── main.py               # Bucle principal
-├── state.py              # Estado interno
-│
-├── pyproject.toml
-├── uv.lock
-└── README.md
+├── state.py      # Gestor del estado interno transaccional y persistencia en memoria viva.
+├── game.py       # Cerebro estratégico. Calcula excedentes, faltantes y prioriza acciones.
+├── config.py     # Archivo centralizado de hiperparámetros (cooldowns, sleeps, probabilidades).
+├── logger.py     # Motor de trazabilidad por consola del comportamiento del agente.
+└── main.py       # Punto de entrada. Ejecuta el Agentic Loop infinito.
 ```
 
-## Arquitectura del proyecto
 
-### `pln/api/`
+---------------------------------------------
+## El Ciclo de Vida del Agente (Agentic Loop)
+El agente opera de manera asíncrona y autónoma mediante un bucle continuo (`while True`) estructurado bajo el paradigma Diseñar ➔ Actuar ➔ Observar:
 
-Responsable de toda la comunicación HTTP con el servidor Butler.
 
-#### `client.py`
+### 1. Sincronización de Estado y Análisis Estratégico
 
-- `get_info()` → obtiene recursos, objetivos, alias y buzón
-- `get_gente()` → obtiene agentes conectados
-- `enviar_carta()` → envía mensajes entre agentes
-- `enviar_paquete()` → envía recursos
-- `borrar_carta()` → elimina cartas procesadas
+Al inicio de cada iteración, el agente consulta el endpoint `/info` para sincronizar su alias, objetivos y recursos actuales. Inmediatamente después, el módulo `game.py` evalúa de forma dinámica la matriz de necesidades, dividiendo el inventario en dos listas vivas: `recursos_sobrantes` (monedas de cambio) y `recursos_faltantes` (objetivos prioritarios).
 
----
+### 2. Procesamiento Inteligente del Buzón
 
-### `pln/nlp/`
-
-Módulo encargado del procesamiento lingüístico.
-
-#### `normalize.py`
-
-Funciones de normalización y limpieza textual:
-
-- normalización de recursos,
-- normalización de texto libre,
-- detección de alias propio,
-- filtrado de mensajes del sistema.
-
-#### `parse.py`
-
-Parsing basado en reglas:
-
-- `parse_oferta_v1()`
-- `extraer_oferta_1x1_regex()`
-
-#### `llm.py`
-
-Interpretación flexible mediante LLM local.
-
-La función:
-
-```python
-interpretar_carta_a_listas()
+El agente lee las cartas entrantes filtrando mensajes del sistema o autoenvíos. Procesa los textos mediante el pipeline de tres niveles (Estructurado ➔ Regex ➔ LLM) para traducir el lenguaje natural a un esquema estricto:
 ```
-
-devuelve siempre:
-
-```json
 {
-  "quiere": [...],
-  "ofrece": [...]
+  "quiere": ["Madera"],
+  "ofrece": ["Oro"]
 }
 ```
+Una oferta se considera viable **únicamente** si el recurso ofrecido por el rival se encuentra en nuestra lista de `faltantes` y el recurso solicitado pertenece a nuestros `sobrantes`. Para fomentar la liquidez en fases tempranas, el agente cuenta con un margen de generosidad configurable que flexibiliza el valor de los intercambios.
 
----
+### 3. Resolución Transaccional y Ofertas Proactivas
 
-### `pln/trading/`
+- **Respuestas y Envío de Paquetes**: Si una oferta es aprobada (o si se detecta una confirmación de un intercambio que nosotros propusimos previamente), el agente ejecuta el envío físico de los recursos mediante `/enviar_paquete` y limpia de forma segura el buzón con `/borrar_carta` para evitar el desbordamiento del contexto.
 
-Contiene la lógica principal de negociación.
+- **Estrategia Proactiva**: Si no hay mensajes entrantes, el agente calcula mediante una distribución probabilística (`PROB_ENVIAR_OFERTA`) si debe iniciar una negociación. Elige un destinatario del ecosistema de manera aleatoria, comprueba las restricciones de _cooldown anti-spam_ en `offers.py`, genera una propuesta formal y la envía al mercado, registrándola internamente como oferta pendiente.
 
-#### `logic.py`
+### 4. Mitigación de Comportamientos Predecibles
 
-- evaluación de trueques,
-- confirmación de intercambios,
-- gestión de ofertas pendientes,
-- validaciones de seguridad,
-- control de duplicados.
+Para evitar colisiones de red con otros bots y mitigar patrones de comportamiento que puedan ser explotados por agentes rivales, el bucle finaliza aplicando un retardo estocástico calculado dinámicamente entre un umbral configurable (`SLEEP_MIN` y `SLEEP_MAX`).
 
-#### `offers.py`
 
-- cooldown anti-spam,
-- registro de ofertas activas,
-- generación de mensajes estructurados,
-- selección de intercambios 1x1.
+----------------------------------------------------
+## 🔒 Mecanismos de Robustez y Seguridad Operacional
 
----
+Para garantizar la estabilidad del agente durante ejecuciones prolongadas en entornos hostiles, se han implementado las siguientes protecciones:
 
-### `pln/state.py`
+- **Filtro Anti-Spam**: Sistema de cooldown temporal que bloquea envíos masivos hacia un mismo agente si este no responde a ofertas previas.
 
-Estado interno persistente entre iteraciones del agente.
+- **Control de Duplicados**: Validación de hashes de cartas procesadas para evitar la doble ejecución de transacciones idénticas.
 
-Contiene:
+- **Tolerancia a Fallos de Red**: Captura de excepciones en la capa de comunicación HTTP con reintentos exponenciales automáticos ante caídas intermitentes del servidor Butler.
 
-- `ULTIMO_ENVIO_A`
-- `PAQUETES_ENVIADOS`
-- `OFERTAS_PENDIENTES`
+- **Cierre Seguro (Graceful Shutdown)**: El script captura de forma nativa la señal SIGINT (Ctrl + C), asegurando que el agente complete cualquier transacción en curso antes de liberar los recursos y desconectarse del ecosistema.
 
----
 
-### `pln/game.py`
+----------------------------------------------
+## 🛠️ Instalación y Configuración del Entorno
 
-Funciones auxiliares de estrategia:
+### Prerrequisitos
 
-- cálculo de recursos sobrantes,
-- cálculo de recursos faltantes,
-- priorización de cartas,
-- envío proactivo de ofertas.
+El proyecto utiliza uv, un instalador y gestor de entornos de Python extremadamente rápido escrito en Rust.
 
----
-
-### `pln/main.py`
-
-Contiene el bucle principal del agente.
-
-Gestiona:
-
-- consulta del estado,
-- procesamiento del buzón,
-- evaluación de ofertas,
-- envío de recursos,
-- comportamiento probabilístico,
-- control temporal del agente.
-
----
-
-### `pln/config.py`
-
-Configuración global del sistema:
-
-- cooldowns,
-- tiempos de espera,
-- probabilidad de envío,
-- URLs del servidor,
-- parámetros del LLM.
-
----
-
-### `pln/logger.py`
-
-Sistema de logging centralizado:
-
-```python
-log("mensaje")
+#### 1. Clonar el repositorio:
 ```
-
-## Flujo de ejecución
-
-### 1. Consulta del estado
-
-El agente consulta periódicamente:
-
-```text
-GET /info
-```
-
-Obtiene:
-
-- recursos actuales,
-- objetivos,
-- alias,
-- buzón de mensajes.
-
----
-
-### 2. Análisis estratégico
-
-Se calculan:
-
-- recursos sobrantes → posibles intercambios,
-- recursos faltantes → objetivos prioritarios.
-
----
-
-### 3. Procesamiento del buzón
-
-El sistema prioriza:
-
-1. confirmaciones pendientes,
-2. nuevas ofertas.
-
-La interpretación sigue este orden:
-
-```text
-OFERTA_V1 → Regex → LLM
-```
-
-Una oferta solo se acepta si:
-
-- el recurso ofrecido pertenece a faltantes,
-- el recurso solicitado pertenece a sobrantes.
-
----
-
-### 4. Gestión de ofertas pendientes
-
-Cuando otro agente acepta una oferta enviada previamente:
-
-- se envía el recurso comprometido,
-- se confirma el intercambio,
-- se elimina el pendiente interno.
-
----
-
-### 5. Ofertas proactivas
-
-Con probabilidad configurable:
-
-```python
-PROB_ENVIAR_OFERTA
-```
-
-el agente:
-
-- selecciona un destinatario aleatorio,
-- respeta cooldown anti-spam,
-- genera una propuesta 1x1,
-- registra la oferta pendiente.
-
----
-
-### 6. Espera aleatoria
-
-Para evitar comportamiento determinista:
-
-```python
-sleep(random entre SLEEP_MIN y SLEEP_MAX)
-```
-
----
-
-## Robustez y seguridad
-
-El sistema incorpora varias medidas de protección:
-
-- prevención de autoenvíos,
-- cooldown anti-spam,
-- control de duplicados,
-- limpieza automática de estado antiguo,
-- tolerancia a errores de red,
-- recuperación automática ante fallos temporales.
-
----
-
-## Tecnologías utilizadas
-
-- Python 3.12
-- uv
-- httpx
-- Ollama
-- JSON
-- Expresiones regulares
-- Arquitectura modular
-
----
-
-## Variables de entorno
-
-| Variable | Descripción |
-|---|---|
-| `FDI_PLN__BUTLER_ADDRESS` | Dirección del servidor Butler |
-| `FDI_PLN__AGENTE` | Alias del agente en modo monopuesto |
-
----
-
-## Instalación del entorno
-
-### 1. Clonar repositorio
-
-```bash
 git clone https://github.com/maritriv/fdi-pln2608.git
-cd fdi-pln2608
+cd fdi-pln2608/p1-g08
 ```
 
----
-
-### 2. Instalar dependencias
-
-Instalar `uv`:
-
-```bash
+#### 2. Instalar dependencias y sincronizar el entorno virtual:
+```
 pip install uv
-```
-
-Instalar dependencias del proyecto:
-
-```bash
 uv sync
 ```
 
----
-
-### 3. Configurar Ollama
-
-Descargar el modelo utilizado:
-
-```bash
+#### 3. Configurar el entorno local de Ollama:
+Asegúrate de que el servicio de Ollama esté ejecutándose localmente (`http://localhost:11434`) y descarga el modelo visual e idiomático utilizado por el pipeline de extracción:
+```
 ollama pull qwen3-vl:8b
 ```
 
-El sistema utiliza:
+---------------------------
+## 🚀 Ejecución del Agente
 
-```text
-http://localhost:11434/api/generate
+El comportamiento del agente se puede parametrizar mediante variables de entorno antes del lanzamiento.
+
+|Variable|Descripción|Ejemplo de valor|
+|--------|-----------|----------------|
+|`FDI_PLN__BUTLER_ADDRESS`|URL base del servidor Butler central|`[http://127.0.0.1:7719](http://127.0.0.1:7719)`|
+|`FDI_PLN__AGENTE`|Alias único asignado al agente en el servidor|`Mercader_G08`|
+
+Para arrancar el ciclo autónomo del agente, exporta la dirección del servidor y ejecuta el módulo principal con `uv`:
 ```
-
----
-
-## Ejecución
-
-Definir la dirección del servidor Butler:
-
-```bash
 export FDI_PLN__BUTLER_ADDRESS="http://127.0.0.1:7719"
-```
-
-Ejecutar el agente:
-
-```bash
 uv run fdi-pln-2608-p1
 ```
 
-Para detener el sistema:
 
-```text
-Ctrl + C
-```
+--------------------------
+## 👥 Equipo de Desarrollo
 
-El agente captura correctamente la señal y finaliza de forma segura.
+Proyecto diseñado e implementado por estudiantes del Grado en Ingeniería de Datos e Inteligencia Artificial de la Universidad Complutense de Madrid (UCM):
 
----
+- **Carlota Salazar Martín**
+- **Marina Triviño de las Heras**
 
-## Uso de LLM
-
-El agente utiliza un modelo local ejecutado mediante Ollama
-para interpretar mensajes ambiguos o escritos en lenguaje natural.
-
-El LLM no toma decisiones estratégicas directamente.
-Su función se limita a extraer información estructurada
-a partir de cartas, mientras que la lógica de negociación
-permanece controlada mediante reglas deterministas.
-
----
-
-## Equipo de desarrollo
-
-Proyecto desarrollado por estudiantes del Grado en Ingeniería de Datos e Inteligencia Artificial (UCM):
-
-- Carlota Salazar Martín
-- Marina Triviño de las Heras
