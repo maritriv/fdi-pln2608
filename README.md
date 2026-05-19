@@ -1,22 +1,22 @@
-# Procesamiento de Lenguaje Natural (PLN) 2026 🤖📚
+# Procesamiento de Lenguaje Natural (PLN) 2026
 **Grupo G08 - Grado en Ingeniería de Datos e Inteligencia Artificial (UCM)**
 
 Este repositorio contiene el conjunto de prácticas desarrolladas durante el curso, que abarcan desde la creación de agentes inteligentes y síntesis de voz, hasta criptoanálisis de codificaciones propias y sistemas de recuperación de información.
 
 -------
 
-# 👥 Equipo de Desarrollo
+# Equipo de Desarrollo
 
 - **Carlota Salazar Martín**
 - **Marina Triviño de las Heras**
 
 -------
 
-# 📂 Estructura del Proyecto
+# Estructura del Proyecto
 
 El repositorio está organizado por prácticas, cada una con su propia lógica, dependencias y documentación específica:
 
-### [P1] Trading Bot - Agente de Negociación ⚖️
+### [P1] Trading Bot - Agente de Negociación 
 
 Localizado en `/p1-g08`. Un agente capaz de interactuar con un servidor de trueque mediante lenguaje natural.
 
@@ -24,14 +24,14 @@ Localizado en `/p1-g08`. Un agente capaz de interactuar con un servidor de trueq
 - **Lógica**: Gestión de inventario, detección de recursos faltantes/sobrantes y sistema anti-spam.
 - **Tecnologías**: Python, `uv`, `client-server` communication.
 
-### [P2] Fonética y Síntesis por Concatenación 🎙️
+### [P2] Fonética y Síntesis por Concatenación 
 
 Localizado en `/p2-g08`. Análisis de la señal de voz y reconstrucción manual de pangramas.
 
 - **Proceso**: Grabación, segmentación en **Praat** y ensamblaje mediante crossfading.
 - **Análisis**: Estudio técnico sobre la coarticulación, prosodia y discontinuidad espectral en la síntesis del habla.
 
-### [P3] Detectives de Criptoglifos (PLNCG26) 🔍
+### [P3] Detectives de Criptoglifos (PLNCG26) 
 
 Localizado en `/p3-g08_C` y `/p3-g08_M`. Ingeniería inversa de un sistema de codificación binario desconocido.
 
@@ -39,7 +39,7 @@ Localizado en `/p3-g08_C` y `/p3-g08_M`. Ingeniería inversa de un sistema de co
 - **Script**: Herramienta CLI para `encode`, `decode` y `detect` de archivos en formato PLNCG26.
 - **Algoritmo**: Basado en desplazamientos constantes y gestión de diacríticos por bytes adyacentes.
 
-### [P4] Quijote App - Recuperación de Información 📖
+### [P4] Quijote App - Recuperación de Información 
 
 Localizado en `/p4-g08`. Buscador profesional de pasajes literales de El Quijote.
 
@@ -49,7 +49,7 @@ Localizado en `/p4-g08`. Buscador profesional de pasajes literales de El Quijote
 
 -------
 
-# 🛠️ Configuración Global
+# Configuración Global
 
 Este proyecto utiliza uv como gestor de paquetes y entornos de Python para garantizar la reproducibilidad.
 
@@ -70,7 +70,7 @@ uv sync
 
 ------
 
-# 🚀 Cómo ejecutar las prácticas
+# Cómo ejecutar las prácticas
 
 Cada carpeta contiene su propio manual de uso, pero aquí tienes los comandos principales:
 
@@ -82,6 +82,6 @@ Cada carpeta contiene su propio manual de uso, pero aquí tienes los comandos pr
 
 ------
 
-# 📝 Notas de Entrega
+# Notas de Entrega
 
 - La **Práctica 3** presenta dos implementaciones individuales (`_C` y `_M`) debido a la metodología de investigación seguida en el laboratorio.
