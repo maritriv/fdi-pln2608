@@ -15,6 +15,7 @@ A diferencia de los enfoques puramente deterministas o completamente basados en 
 
 La lógica de negocio y la toma de decisiones financieras permanecen blindadas bajo reglas deterministas en código Python. Cuando llega una carta, el agente activa un pipeline de procesamiento lingüístico en cascada:
 
+```
 📥 Carta Recibida
        │
        ▼
@@ -31,6 +32,7 @@ La lógica de negocio y la toma de decisiones financieras permanecen blindadas b
 ┌─────────────────────────────┐
 │ 3. Inferencia Semántica LLM │ ──(Ollama Inferencia)───► Extract: {quiere, ofrece}
 └─────────────────────────────┘
+```
 
 Esta estrategia garantiza cuatro ventajas críticas en el sistema:
 
