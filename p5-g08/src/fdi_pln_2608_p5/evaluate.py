@@ -128,11 +128,56 @@ def compute_entity_metrics(pred_tags, gold_tags):
         else 2 * precision * recall / (precision + recall)
     )
 
-    return {
+    metrics = {
         "entity_precision": precision,
         "entity_recall": recall,
         "entity_f1": f1,
     }
+    metrics.update(compute_entity_metrics_by_type(pred_tags, gold_tags))
+    return metrics
+
+
+def compute_entity_metrics_by_type(pred_tags, gold_tags):
+    """Calcula metricas exactas BIO separadas por tipo de entidad."""
+
+    by_type = {}
+
+    for pred_seq, gold_seq in zip(pred_tags, gold_tags):
+        pred_entities = set(bio_tags_to_entities(pred_seq))
+        gold_entities = set(bio_tags_to_entities(gold_seq))
+        entity_types = {entity[0] for entity in pred_entities | gold_entities}
+
+        for entity_type in entity_types:
+            bucket = by_type.setdefault(
+                entity_type,
+                {"pred": 0, "gold": 0, "true_positive": 0},
+            )
+            pred_of_type = {
+                entity for entity in pred_entities if entity[0] == entity_type
+            }
+            gold_of_type = {
+                entity for entity in gold_entities if entity[0] == entity_type
+            }
+            bucket["pred"] += len(pred_of_type)
+            bucket["gold"] += len(gold_of_type)
+            bucket["true_positive"] += len(pred_of_type & gold_of_type)
+
+    metrics = {}
+    for entity_type, counts in sorted(by_type.items()):
+        precision = _safe_divide(counts["true_positive"], counts["pred"])
+        recall = _safe_divide(counts["true_positive"], counts["gold"])
+        f1 = (
+            None
+            if precision is None or recall is None or precision + recall == 0
+            else 2 * precision * recall / (precision + recall)
+        )
+        prefix = f"entity_{entity_type.lower()}"
+        metrics[f"{prefix}_precision"] = precision
+        metrics[f"{prefix}_recall"] = recall
+        metrics[f"{prefix}_f1"] = f1
+        metrics[f"{prefix}_support"] = counts["gold"]
+
+    return metrics
 
 
 @torch.no_grad()
@@ -255,6 +300,7 @@ __all__ = [
     "analyze_bpe",
     "bio_tags_to_entities",
     "compute_entity_metrics",
+    "compute_entity_metrics_by_type",
     "compute_token_metrics",
     "evaluate_ner_checkpoint",
     "evaluate_ner_dataloader",

@@ -1,0 +1,17 @@
+{
+  "token_accuracy": 0.8880682750697522,
+  "token_precision": 0.2665876777251185,
+  "token_recall": 0.7053291536050157,
+  "token_f1": 0.3869303525365434,
+  "entity_precision": 0.1132404181184669,
+  "entity_recall": 0.5909090909090909,
+  "entity_f1": 0.19005847953216376,
+  "entity_loc_precision": 0.10273972602739725,
+  "entity_loc_recall": 0.8823529411764706,
+  "entity_loc_f1": 0.18404907975460122,
+  "entity_loc_support": 17,
+  "entity_per_precision": 0.11682242990654206,
+  "entity_per_recall": 0.5376344086021505,
+  "entity_per_f1": 0.19193857965451058,
+  "entity_per_support": 93
+}

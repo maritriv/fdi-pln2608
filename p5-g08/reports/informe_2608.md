@@ -1,179 +1,388 @@
-# Informe P5 - Grupo 2608
+# Informe P5
 
-## 1. Introduccion
+## 1. Introducción
 
-Objetivo de la practica, corpus utilizado, alcance del mini LLM y relacion con
-la tarea NER.
+En esta práctica se ha desarrollado un modelo de lenguaje basado en la arquitectura Transformer y, a partir de él, un sistema de reconocimiento de entidades nombradas (NER) utilizando un esquema BIO simplificado.
 
-## 2. Tokenizacion BPE
+El objetivo principal del proyecto no era competir con modelos grandes ni obtener resultados comparables a sistemas industriales actuales, sino comprender e implementar manualmente los componentes fundamentales que aparecen en modelos modernos de procesamiento del lenguaje natural.
 
-Explicar vocabulario inicial, conteo de pares frecuentes, merges, codificacion y
-decodificacion. Incluir ejemplos reales del corpus y comentar el efecto de
-`vocab_size`:
+A lo largo de la práctica se trabajó principalmente con:
 
-- 200
-- 400
-- 600
+- tokenización BPE;
+- mecanismos de auto-atención;
+- entrenamiento causal autoregresivo;
+- transferencia de pesos entre tareas;
+- y adaptación de un backbone Transformer a reconocimiento de entidades.
 
-El tokenizador parte de caracteres individuales observados en el corpus. En cada
-iteracion cuenta pares adyacentes, selecciona el par mas frecuente y crea un
-nuevo token que representa la fusion. Al codificar un texto nuevo, se aplican
-los merges aprendidos en el mismo orden. Esto permite representar palabras
-frecuentes con pocos tokens y palabras raras como composiciones de piezas mas
-pequenas.
+El proyecto final se entrega como un ejecutable único (`fdi-pln-2608-p5`) capaz de:
 
-Comando para obtener ejemplos reproducibles:
+- entrenar modelos;
+- generar texto;
+- preparar datasets NER;
+- evaluar métricas;
+- e inferir entidades sobre texto arbitrario.
 
-```bash
-uv run fdi-pln-2608-p5 analyze-bpe \
-  --weights checkpoints/p5_causal_2608.pth \
-  --text "Alice went to Wonderland"
+Todos los checkpoints generados son autocontenidos e incluyen tanto los pesos del modelo como la configuración necesaria para reutilizarlos posteriormente.
+
+Además, uno de los objetivos importantes del proyecto fue mantener todo el pipeline completamente reproducible y ejecutable únicamente desde CLI.
+
+---
+
+## 2. Corpus utilizado
+
+Para el entrenamiento del modelo causal se utilizaron fragmentos literarios de Lewis Carroll incluidos en:
+
+- `resources/alice_in_wonderland.txt`
+- `resources/looking_glass.txt`
+
+Se decidió trabajar con estos textos porque ofrecen:
+
+- un vocabulario relativamente variado;
+- abundancia de diálogos;
+- personajes recurrentes;
+- y suficientes referencias espaciales como para reutilizar posteriormente el corpus en una tarea NER.
+
+Aunque el tamaño total del dataset es relativamente pequeño comparado con corpus modernos, resultaba suficiente para implementar y validar todo el pipeline Transformer de la práctica.
+
+Para la parte de reconocimiento de entidades se reutilizó el corpus anotado manualmente durante la preentrega del grupo 1 de etiquetado.
+
+El fichero final utilizado fue:
+
+```text
+data/ner/merged.json
 ```
 
-Tabla para pegar analisis:
+Este corpus fusionado se convierte automáticamente al formato CoNLL mediante:
 
-| Texto | Caracteres | Tokens | Caracteres/token | Segmentacion |
+```bash
+uv run fdi-pln-2608-p5 prepare-ner-data --input ../pre-entrega_2601/merged.json --output data/ner/final.conll
+```
+
+Durante esta conversión se eliminan espacios y tokens irrelevantes para entrenamiento, manteniendo únicamente las secuencias útiles para el modelo NER.
+
+Las estadísticas finales del corpus fueron:
+
+| Medida NER | Valor |
+| --- | ---: |
+| Frases fusionadas | 59 |
+| Tokens en la anotación original | 5750 |
+| Tokens escritos en CoNLL | 3263 |
+| Tokens blancos omitidos | 2487 |
+| Tokens de entidad | 194 |
+| Kappa de Cohen medio | 0.835 |
+| Acuerdo medio | 98% |
+
+Los resultados de acuerdo inter-anotador obtenidos en la preentrega fueron bastante altos. Un valor de κ superior a 0.8 suele considerarse un acuerdo fuerte, lo que indica que las anotaciones fueron relativamente consistentes entre participantes.
+
+Las etiquetas originales de la preentrega se transformaron posteriormente al esquema BIO estándar utilizado por el modelo:
+
+| Preentrega | BIO | Significado |
+| --- | --- | --- |
+| `o` | `O` | Fuera de entidad |
+| `pi` | `B-PER` | Inicio de persona/personaje |
+| `pc` | `I-PER` | Continuación de persona/personaje |
+| `li` | `B-LOC` | Inicio de localización |
+| `lc` | `I-LOC` | Continuación de localización |
+
+---
+
+## 3. Tokenización BPE
+
+El modelo utiliza una tokenización basada en BPE (*Byte Pair Encoding*). En lugar de trabajar únicamente con palabras completas o caracteres individuales, el sistema aprende automáticamente fragmentos frecuentes del corpus.
+
+El procedimiento seguido fue relativamente sencillo:
+
+1. comenzar desde caracteres individuales;
+2. contar pares consecutivos frecuentes;
+3. fusionar progresivamente los pares más comunes;
+4. y reutilizar esas fusiones durante la codificación.
+
+Este enfoque permite representar palabras frecuentes mediante menos tokens y, al mismo tiempo, seguir siendo capaz de tokenizar palabras desconocidas utilizando fragmentos más pequeños.
+
+Se decidió implementar BPE porque resulta mucho más flexible que una tokenización puramente por palabras, especialmente en corpus pequeños donde aparecen:
+
+- nombres raros;
+- deformaciones;
+- puntuación irregular;
+- o vocabulario poco frecuente.
+
+Ejemplo real obtenido con el modelo entrenado:
+
+```bash
+uv run fdi-pln-2608-p5 analyze-bpe --weights checkpoints/p5_causal_2608.pth --text "Alice went to Wonderland"
+```
+
+| Texto | Caracteres | Tokens | Caracteres/token | Segmentación |
 | --- | ---: | ---: | ---: | --- |
-|  |  |  |  |  |
+| `Alice went to Wonderland` | 24 | 11 | 2.18 | `\n \| lic \| e \| went \| to \| \n \| on \| d \| er \| l \| and` |
 
-## 3. Atencion escalada
+En este ejemplo puede verse una de las limitaciones del entrenamiento con corpus pequeño: algunas palabras se fragmentan de forma poco natural, especialmente aquellas menos frecuentes o con mayúsculas.
 
-Describir `Q`, `K`, `V`, producto escalar, escalado por `sqrt(head_dim)`,
-softmax, dropout y vector contexto. Explicar por que el escalado evita
-saturacion de softmax y por que la softmax convierte puntuaciones en pesos de
-atencion interpretables.
+Aun así, el comportamiento general del tokenizador fue razonablemente bueno para el tamaño reducido del dataset y permitió mantener el vocabulario controlado.
 
-Para cada posicion, el modelo calcula queries, keys y values mediante
-proyecciones lineales. El producto `Q @ K.T` mide compatibilidad entre cada
-query y cada key. Si la dimension de cada cabeza es grande, la varianza de estos
-productos escala con `head_dim`; dividir por `sqrt(head_dim)` mantiene los
-logits en un rango mas estable y evita que la softmax se vuelva demasiado
-puntiaguda al principio del entrenamiento.
+---
 
-La softmax convierte logits arbitrarios en una distribucion: todos los pesos son
-positivos y suman 1. Asi, el vector de contexto se interpreta como una media
-ponderada de los values. Dropout sobre la matriz de atencion reduce dependencia
-excesiva de conexiones concretas.
+## 4. Atención escalada
 
-La atencion causal enmascara posiciones futuras con `-inf` antes de la softmax,
-por lo que en generacion cada token solo usa el pasado. La atencion
-bidireccional no aplica esa mascara y permite usar contexto izquierdo y derecho;
-por eso se usa en NER, donde la etiqueta de una palabra puede depender de lo que
-aparece despues.
+El núcleo del Transformer implementado en la práctica es el mecanismo de auto-atención.
 
-## 4. Transformer
+Cada token genera tres representaciones distintas:
 
-Describir embeddings de token y posicion, multi-head attention, residuales,
-LayerNorm pre-norm, feed-forward con GELU, dropout y batching.
+- queries;
+- keys;
+- values.
 
-Comparar:
+A partir de ellas se calcula la compatibilidad entre posiciones usando el producto:
 
-- `context_size`: 64 vs 128
-- `n_layers`: 2 vs 4
-- `dropout`: 0.0 vs 0.1
-
-## 5. LLM causal
-
-Explicar modelado autoregresivo, desplazamiento `x -> y`, cross entropy,
-mascara causal y generacion token a token. Justificar `causal=True` porque el
-modelo no debe ver tokens futuros durante entrenamiento ni inferencia.
-
-Incluir ejemplos con:
-
-- `temperature=0.5`
-- `temperature=0.8`
-- `temperature=1.2`
-
-## 6. NER
-
-Explicar BIO tagging, etiquetas usadas (`O`, `B-PER`, `I-PER`, `B-LOC`,
-`I-LOC`), cabeza de clasificacion por token y uso de `causal=False` para acceder
-al contexto completo de la frase.
-
-El modelo NER reutiliza embeddings, posiciones y bloques Transformer del modelo
-causal preentrenado. La cabeza `lm_head` se sustituye por una capa lineal que
-predice una etiqueta BIO por subtoken. Para alinear palabras con BPE, la primera
-pieza de una palabra etiquetada como `B-X` mantiene `B-X` y las piezas
-siguientes reciben `I-X`. Las posiciones de padding usan `ignore_index=-100`
-para no afectar a la perdida ni a las metricas.
-
-Metricas preparadas:
-
-- token accuracy
-- token precision, recall y F1, excluyendo la clase `O`
-- entity precision, recall y F1, con coincidencia exacta BIO
-
-Comando:
-
-```bash
-uv run fdi-pln-2608-p5 eval-ner \
-  --weights checkpoints/p5_ner_2608.pth \
-  --data data/ner/final.conll
+```text
+Q @ K.T
 ```
 
-Tabla para resultados NER:
+Sin embargo, cuando la dimensión interna aumenta, estos productos pueden crecer demasiado y provocar saturación en la softmax. Para evitarlo se aplica el factor:
 
-| Modelo | Token acc | Token P | Token R | Token F1 | Entity P | Entity R | Entity F1 | Observaciones |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
-|  |  |  |  |  |  |  |  |  |
-
-## 7. Corpus y anotacion
-
-Describir corpus preentrega, criterios de anotacion, metadatos, desacuerdos,
-kappa de Cohen y decisiones finales. Indicar ejemplos ambiguos y como se
-resolvieron.
-
-## 8. Experimentos
-
-Tabla sugerida:
-
-| Experimento | vocab | context | d_model | heads | layers | dropout | epochs | train loss | val loss | observaciones |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
-| base | 400 | 128 | 128 | 4 | 4 | 0.1 | 8 |  |  |  |
-| vocab pequeno | 200 | 128 | 128 | 4 | 4 | 0.1 | 8 |  |  |  |
-| vocab grande | 600 | 128 | 128 | 4 | 4 | 0.1 | 8 |  |  |  |
-| contexto corto | 400 | 64 | 128 | 4 | 4 | 0.1 | 8 |  |  |  |
-| menos capas | 400 | 128 | 128 | 4 | 2 | 0.1 | 8 |  |  |  |
-| sin dropout | 400 | 128 | 128 | 4 | 4 | 0.0 | 8 |  |  |  |
-
-Generar tabla de muestras:
-
-```bash
-uv run fdi-pln-2608-p5 experiment-generate \
-  --weights checkpoints/p5_causal_2608.pth \
-  --prompt "Alice was" \
-  --out reports/generation_experiments.md
+```text
+1 / sqrt(head_dim)
 ```
 
-Espacio para pegar resumen de `reports/generation_experiments.md`:
+Este escalado estabiliza el entrenamiento y ayuda a mantener gradientes útiles.
 
-| Temperature | Top-k | Calidad | Repeticion | Coherencia | Observaciones |
-| ---: | ---: | --- | --- | --- | --- |
-| 0.5 | 10 |  |  |  |  |
-| 0.5 | 20 |  |  |  |  |
-| 0.5 | 50 |  |  |  |  |
-| 0.8 | 10 |  |  |  |  |
-| 0.8 | 20 |  |  |  |  |
-| 0.8 | 50 |  |  |  |  |
-| 1.2 | 10 |  |  |  |  |
-| 1.2 | 20 |  |  |  |  |
-| 1.2 | 50 |  |  |  |  |
+Durante las pruebas se observó que pequeñas variaciones en esta parte afectaban bastante a la estabilidad del modelo, especialmente entrenando únicamente en CPU y con datasets relativamente pequeños.
 
-## 9. Resultados
+Para generación de texto se utiliza máscara causal, impidiendo que el modelo vea tokens futuros. En cambio, para NER se utiliza atención bidireccional, ya que la clasificación de una palabra depende tanto del contexto izquierdo como del derecho.
 
-Interpretar perdidas, ejemplos generados y entidades detectadas. Comparar
-calidad, coherencia local, repeticion, errores BIO y sensibilidad a la
-temperatura.
+---
 
-## 10. Errores y limitaciones
+## 5. Modelo causal
 
-Comentar limites por CPU, tamano de corpus, vocabulario pequeno, anotacion NER
-reducida, entidades ambiguas, errores por subtokenizacion y dependencia de la
-semilla.
+El modelo causal implementado sigue una arquitectura Transformer relativamente pequeña, diseñada para poder entrenarse en tiempos razonables dentro de las limitaciones de la práctica.
 
-## 11. Conclusiones
+El modelo combina:
 
-Resumir que se ha aprendido sobre BPE, atencion, Transformers, generacion
-causal, transferencia de backbone y NER bidireccional. Incluir posibles mejoras:
-mas corpus, mas anotaciones, metricas por entidad, early stopping y busqueda de
-hiperparametros mas sistematica.
+- embeddings de token;
+- embeddings posicionales;
+- bloques Transformer pre-norm;
+- multi-head attention;
+- capas feed-forward con GELU;
+- dropout;
+- y una cabeza final de lenguaje.
+
+Durante el entrenamiento causal, el modelo recibe una secuencia y aprende a predecir el siguiente token.
+
+La configuración utilizada finalmente fue:
+
+| Parámetro | Valor |
+| --- | ---: |
+| `vocab_size` | 300 |
+| `context_size` | 128 |
+| `d_model` | 128 |
+| `n_heads` | 4 |
+| `n_layers` | 4 |
+| `dropout` | 0.1 |
+| `epochs` | 5 |
+| `batch_size` | 64 |
+| `lr` | 0.0003 |
+
+Inicialmente se probaron configuraciones más grandes, pero el entrenamiento se volvía demasiado lento y los resultados no mejoraban significativamente debido al tamaño reducido del corpus.
+
+Ejemplo de generación:
+
+```bash
+uv run fdi-pln-2608-p5 generate --weights checkpoints/p5_causal_2608.pth --prompt "Alice was" --max-new-tokens 80 --top-k 20
+```
+
+Salida observada:
+
+```text
+Alice was a worstanding large carriled it, and had put it: she stood out of
+we frightened so day.
+
+“suppose it might too say,” said the duchess, “how walk
+about their day
+```
+
+Aunque el modelo todavía produce errores y palabras deformadas, sí consigue capturar parcialmente el estilo narrativo del corpus: aparecen diálogos, puntuación similar y nombres propios característicos del texto original.
+
+Teniendo en cuenta que el entrenamiento se realizó sobre un corpus pequeño y sin recursos GPU, el comportamiento puede considerarse razonablemente satisfactorio.
+
+---
+
+## 6. Modelo NER
+
+La parte NER reutiliza el backbone Transformer aprendido durante el entrenamiento causal.
+
+En lugar de entrenar un modelo completamente nuevo desde cero, se reaprovechan:
+
+- embeddings;
+- posiciones;
+- y bloques Transformer.
+
+Únicamente se sustituye la cabeza final por una capa lineal de clasificación BIO.
+
+Esta decisión se tomó porque incluso modelos pequeños suelen beneficiarse bastante de haber aprendido previamente ciertas regularidades del lenguaje.
+
+Uno de los problemas principales encontrados fue el fuerte desbalance del corpus: la inmensa mayoría de tokens pertenecen a la clase `O`.
+
+Para reducir este efecto se añadieron pesos de clase suaves durante el entrenamiento. Esto permitió mejorar bastante el recall de entidades, aunque introdujo también más falsos positivos.
+
+Entrenamiento y evaluación:
+
+```bash
+uv run fdi-pln-2608-p5 train-ner --data data/ner/final.conll --causal-weights checkpoints/p5_causal_2608.pth --output checkpoints/p5_ner_2608.pth
+
+uv run fdi-pln-2608-p5 eval-ner --weights checkpoints/p5_ner_2608.pth --data data/ner/final.conll
+```
+
+Resultados obtenidos:
+
+| Modelo | Token acc | Token P | Token R | Token F1 | Entity P | Entity R | Entity F1 |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| NER 2608 | 0.8881 | 0.2666 | 0.7053 | 0.3869 | 0.1132 | 0.5909 | 0.1901 |
+
+Desglose por tipo:
+
+| Tipo | Precision | Recall | F1 | Soporte |
+| --- | ---: | ---: | ---: | ---: |
+| LOC | 0.1027 | 0.8824 | 0.1840 | 17 |
+| PER | 0.1168 | 0.5376 | 0.1919 | 93 |
+
+La accuracy por token es relativamente alta debido al predominio de la clase `O`. Sin embargo, el F1 *entity-level* refleja mucho mejor la dificultad real de la tarea.
+
+En general, el modelo consigue detectar bastantes entidades relevantes, especialmente nombres frecuentes de personajes. No obstante, todavía aparecen errores claros en:
+
+- delimitación exacta de entidades;
+- confusión entre PER y LOC;
+- y falsos positivos en palabras comunes.
+
+Ejemplo real:
+
+```bash
+uv run fdi-pln-2608-p5 ner --weights checkpoints/p5_ner_2608.pth --file examples/text.txt
+```
+
+| Entidad | Tipo predicho |
+| --- | --- |
+| the | PER |
+| Queen | LOC |
+| Wonderland | PER |
+| The | PER |
+| ran | LOC |
+| through | PER |
+| Hatter | PER |
+| March | PER |
+| Hare | LOC |
+| drank | LOC |
+| Alice | PER |
+| garden | LOC |
+| hall | PER |
+
+Aunque aparecen errores evidentes (`the`, `ran`), también se observan aciertos razonables en entidades importantes del corpus como `Alice`, `Hatter` o `garden`.
+
+Dado el tamaño del dataset y la simplicidad del modelo, los resultados obtenidos eran relativamente esperables.
+
+---
+
+## 7. Experimentos de generación
+
+También se realizaron distintas pruebas modificando temperatura y `top-k` para analizar cómo afectaban a la generación.
+
+```bash
+uv run fdi-pln-2608-p5 experiment-generate --weights checkpoints/p5_causal_2608.pth --prompt "Alice was" --out reports/generation_experiments.md --max-new-tokens 40
+```
+
+Resumen cualitativo:
+
+| Temperature | Top-k | Resultado observado |
+| ---: | ---: | --- |
+| 0.5 | 10 | Muy conservador y repetitivo, pero más coherente. |
+| 0.5 | 20 | Algo más variado, aunque todavía rígido. |
+| 0.5 | 50 | Empiezan a aparecer deformaciones frecuentes. |
+| 0.8 | 10 | Buen equilibrio entre variedad y coherencia. |
+| 0.8 | 20 | Resultados más creativos pero menos estables. |
+| 0.8 | 50 | Más ruido y pérdida de control. |
+| 1.2 | 10 | Generación bastante impredecible. |
+| 1.2 | 20 | Saltos semánticos frecuentes. |
+| 1.2 | 50 | Máxima diversidad pero muy poca coherencia. |
+
+Durante las pruebas se observó claramente el comportamiento típico de modelos pequeños:
+
+- temperaturas bajas producen texto más seguro pero repetitivo;
+- temperaturas altas aumentan creatividad;
+- pero también amplifican errores y palabras inexistentes.
+
+El mejor equilibrio general apareció alrededor de `temperature=0.8` y `top-k=10/20`.
+
+---
+
+## 8. Reproducibilidad y CLI
+
+Uno de los objetivos importantes de la práctica era mantener el proyecto completamente reproducible.
+
+Todos los pasos principales pueden ejecutarse desde CLI:
+
+```bash
+uv sync
+uv format --check
+uv run fdi-pln-2608-p5 --help
+
+uv run fdi-pln-2608-p5 generate --weights checkpoints/p5_causal_2608.pth --prompt "Alice was"
+
+uv run fdi-pln-2608-p5 prepare-ner-data --input ../pre-entrega_2601/merged.json --output data/ner/final.conll
+
+uv run fdi-pln-2608-p5 train-ner --data data/ner/final.conll --causal-weights checkpoints/p5_causal_2608.pth --output checkpoints/p5_ner_2608.pth
+
+uv run fdi-pln-2608-p5 eval-ner --weights checkpoints/p5_ner_2608.pth --data data/ner/final.conll
+
+uv run fdi-pln-2608-p5 ner --weights checkpoints/p5_ner_2608.pth --file examples/text.txt
+
+uv build
+```
+
+El wheel final generado fue:
+
+```text
+dist/fdi_pln_2608_p5-1.0-py3-none-any.whl
+```
+
+---
+
+## 9. Limitaciones encontradas
+
+La principal limitación del proyecto fue el tamaño reducido del corpus.
+
+En generación de texto esto provoca:
+
+- vocabulario limitado;
+- errores ortográficos;
+- repeticiones;
+- y pérdida relativamente rápida de coherencia.
+
+En NER, el problema principal fue el fuerte desbalance entre entidades y tokens `O`. Además, el corpus anotado contiene relativamente pocas frases y pocos ejemplos de localizaciones.
+
+También se observó que la tokenización BPE puede fragmentar palabras de manera poco intuitiva cuando aparecen mayúsculas o términos raros.
+
+Por último, aunque los pesos de clase ayudaron a mejorar el recall, también incrementaron notablemente el número de falsos positivos.
+
+En general, muchas de estas limitaciones son esperables cuando se trabaja con datasets pequeños y modelos entrenados únicamente en CPU.
+
+---
+
+## 10. Conclusiones
+
+En conjunto, la práctica permitió implementar un pipeline completo y funcional de procesamiento del lenguaje natural utilizando únicamente componentes desarrollados manualmente.
+
+A lo largo del proyecto se trabajó con:
+
+- tokenización BPE;
+- Transformers;
+- entrenamiento causal;
+- generación autoregresiva;
+- transferencia de pesos;
+- y reconocimiento de entidades.
+
+Aunque los modelos obtenidos son pequeños y todavía presentan limitaciones claras, el sistema completo funciona de forma coherente y reproducible.
+
+Además, una de las partes más interesantes del proyecto fue integrar la preentrega NER realizada manualmente por el grupo y reutilizarla posteriormente para entrenar un modelo real de reconocimiento de entidades.
+
+El resultado final no pretende competir con modelos actuales, pero sí permite entender de forma práctica cómo se construyen y entrenan este tipo de arquitecturas, así como las dificultades reales que aparecen cuando se trabaja con corpus pequeños y recursos limitados.
+
+En general, la práctica resultó especialmente útil para comprender mejor tanto la arquitectura Transformer como los problemas reales que aparecen durante entrenamiento, tokenización, evaluación y ajuste de modelos NLP relativamente pequeños.

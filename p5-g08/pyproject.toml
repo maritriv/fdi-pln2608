@@ -1,6 +1,6 @@
 [project]
 name = "fdi_pln_2608_p5"
-version = "1.0.0"
+version = "1.0"
 description = "Practica P5 de PLN: mini LLM Transformer causal y NER BIO"
 readme = "README.md"
 requires-python = ">=3.11"

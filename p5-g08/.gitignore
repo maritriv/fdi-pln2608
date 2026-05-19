@@ -9,6 +9,8 @@ build/
 dist/
 *.egg-info/
 *.whl
+*.tar.gz
+*.zip
 
 # Entornos virtuales
 .venv/
@@ -37,6 +39,9 @@ Thumbs.db
 # Torch checkpoints temporales
 checkpoints/tmp/
 checkpoints/*.pt.old
+checkpoints/*.tmp
+checkpoints/*_debug.pth
+checkpoints/*_draft.pth
 
 # CUDA (por si acaso)
 *.cuda
@@ -49,6 +54,16 @@ htmlcov/
 tmp/
 temp/
 *.tmp
+*.bak
+*.old
+*.swp
+
+# Salidas experimentales grandes o regenerables
+outputs/
+runs/
+artifacts/
+reports/*.tmp
+reports/*.log
 
 # UV
 .python-version

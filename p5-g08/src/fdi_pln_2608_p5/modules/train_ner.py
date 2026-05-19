@@ -2,6 +2,7 @@ from pathlib import Path
 import time
 
 import torch
+from torch.nn.functional import cross_entropy
 from torch.utils.data import DataLoader, random_split
 
 from fdi_pln_2608_p5.checkpoint import (
@@ -60,7 +61,19 @@ def load_ner_data(path):
     return data
 
 
-def run_ner_epoch(model, dataloader, device, optimizer=None):
+def compute_label_weights(dataset, num_labels=NUM_LABELS):
+    """Calcula pesos de clase suaves para compensar el desbalance O/entidad."""
+
+    counts = torch.ones(num_labels, dtype=torch.float)
+    for _, labels in dataset:
+        valid = labels[labels >= 0]
+        counts += torch.bincount(valid, minlength=num_labels).float()
+
+    weights = torch.sqrt(counts.sum() / (num_labels * counts))
+    return torch.clamp(weights, max=8.0)
+
+
+def run_ner_epoch(model, dataloader, device, optimizer=None, class_weights=None):
     is_train = optimizer is not None
     model.train() if is_train else model.eval()
 
@@ -74,7 +87,14 @@ def run_ner_epoch(model, dataloader, device, optimizer=None):
             if is_train:
                 optimizer.zero_grad()
 
-            _, loss = model(x, labels=y)
+            logits, loss = model(x, labels=None if class_weights is not None else y)
+            if class_weights is not None:
+                loss = cross_entropy(
+                    logits.flatten(0, 1),
+                    y.flatten(),
+                    weight=class_weights,
+                    ignore_index=-100,
+                )
 
             if is_train:
                 loss.backward()
@@ -97,6 +117,7 @@ def train_ner_model(
     train_ratio=0.9,
     seed=42,
     device=None,
+    use_class_weights=True,
 ):
     set_seed(seed)
     device = resolve_device(device)
@@ -166,14 +187,26 @@ def train_ner_model(
     print(f"Pesos inesperados ignorados: {unexpected}")
 
     optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)
+    class_weights = None
+    if use_class_weights:
+        class_weights = compute_label_weights(dataset).to(device)
+        print(f"Pesos de clase NER: {[round(x, 4) for x in class_weights.tolist()]}")
 
     t0 = time.time()
     metrics = {}
 
     for epoch in range(1, epochs + 1):
-        train_loss = run_ner_epoch(model, train_loader, device, optimizer)
+        train_loss = run_ner_epoch(
+            model,
+            train_loader,
+            device,
+            optimizer,
+            class_weights=class_weights,
+        )
         val_loss = (
-            run_ner_epoch(model, val_loader, device) if val_size else float("nan")
+            run_ner_epoch(model, val_loader, device, class_weights=class_weights)
+            if val_size
+            else float("nan")
         )
 
         elapsed = time.time() - t0
@@ -212,6 +245,7 @@ def train_ner_model(
             "batch_size": batch_size,
             "lr": learning_rate,
             "epochs": epochs,
+            "use_class_weights": use_class_weights,
         }
     )
 

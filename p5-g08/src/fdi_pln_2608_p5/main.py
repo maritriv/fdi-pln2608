@@ -1,6 +1,7 @@
 """CLI de la practica P5: mini LLM causal y NER."""
 
 import argparse
+import json
 from pathlib import Path
 
 from fdi_pln_2608_p5.checkpoint import load_checkpoint
@@ -12,6 +13,7 @@ from fdi_pln_2608_p5.modules.ner_predict import (
 )
 from fdi_pln_2608_p5.modules.train import train_model
 from fdi_pln_2608_p5.modules.train_ner import train_ner_model
+from fdi_pln_2608_p5.prepare_ner_data import convert_merged_to_conll
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -57,6 +59,21 @@ def build_parser() -> argparse.ArgumentParser:
     train_ner_parser.add_argument("--lr", type=float, default=3e-4)
     train_ner_parser.add_argument("--seed", type=int, default=42)
 
+    prepare_ner_parser = subparsers.add_parser(
+        "prepare-ner-data",
+        help="Convierte el merged.json de la preentrega a CoNLL/BIO.",
+    )
+    prepare_ner_parser.add_argument(
+        "--input",
+        required=True,
+        help="Ruta al merged.json fusionado de la preentrega.",
+    )
+    prepare_ner_parser.add_argument(
+        "--output",
+        default="data/ner/final.conll",
+        help="Ruta de salida CoNLL/BIO.",
+    )
+
     gen_parser = subparsers.add_parser(
         "generate",
         help="Genera texto a partir de un prompt.",
@@ -87,6 +104,7 @@ def build_parser() -> argparse.ArgumentParser:
     eval_ner_parser.add_argument("--weights", default="checkpoints/p5_ner_2608.pth")
     eval_ner_parser.add_argument("--data", required=True)
     eval_ner_parser.add_argument("--batch-size", type=int, default=16)
+    eval_ner_parser.add_argument("--out", default="reports/ner_metrics_2608.json")
 
     analyze_parser = subparsers.add_parser(
         "analyze-bpe",
@@ -157,6 +175,16 @@ def main() -> None:
         )
         print(text)
 
+    elif args.command == "prepare-ner-data":
+        metrics = convert_merged_to_conll(
+            input_path=args.input,
+            output_path=args.output,
+        )
+        print("Datos NER preparados")
+        print("====================")
+        for name, value in metrics.items():
+            print(f"{name}: {value}")
+
     elif args.command == "ner":
         ner_model_path = args.model_path or args.weights
 
@@ -187,6 +215,13 @@ def main() -> None:
         for name, value in metrics.items():
             rendered = "None" if value is None else f"{value:.4f}"
             print(f"{name}: {rendered}")
+        out_path = Path(args.out)
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_text(
+            json.dumps(metrics, indent=2, ensure_ascii=False) + "\n",
+            encoding="utf-8",
+        )
+        print(f"Metricas guardadas en: {out_path}")
 
     elif args.command == "analyze-bpe":
         analysis = analyze_bpe(

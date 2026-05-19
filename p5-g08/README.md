@@ -1,203 +1,151 @@
 # P5: Toves, Borogoves & Mome Raths
 
-Practica 5 de Procesamiento del Lenguaje Natural. El proyecto implementa desde
-cero un mini LLM basado en Transformers para generacion causal de texto y
-reutiliza su backbone preentrenado para NER con etiquetado BIO.
+![Python](https://img.shields.io/badge/python-3.11%2B-blue)
+![uv](https://img.shields.io/badge/build-uv-4b32c3)
+![Torch](https://img.shields.io/badge/dependency-torch-ee4c2c)
+![Entrega](https://img.shields.io/badge/release-p5v1.0-success)
 
-## Integrantes
+## Descripción general
 
-- Marina Trivino de las Heras
-- Carlota Salazar Martin
+Este proyecto implementa un pequeño modelo de lenguaje basado en la arquitectura Transformer y una tarea de reconocimiento de entidades nombradas (NER) construida sobre el mismo backbone.
 
-## Arquitectura
+La práctica se desarrolló con el objetivo de comprender e implementar manualmente los componentes principales de un pipeline moderno de NLP:
 
-El repositorio separa las piezas principales del sistema:
+- tokenización BPE;
+- embeddings y codificación posicional;
+- scaled self-attention;
+- generación autoregresiva;
+- transferencia de pesos;
+- y adaptación de un backbone Transformer a tareas NER.
 
-- `tokenizer.py`: tokenizador BPE entrenado sobre el corpus.
-- `attention.py`: scaled multi-head self-attention con mascara causal opcional.
-- `transformer.py`: embeddings de token y posicion, bloques Transformer pre-norm,
-  residuales, LayerNorm, GELU y dropout.
-- `causal_llm.py`: modelo causal con `lm_head` y weight tying.
-- `ner_llm.py`: modelo BIO que reutiliza el Transformer y cambia la cabeza final.
-- `checkpoint.py`: checkpoints autocontenidos con pesos, tokenizador, config,
-  metricas y semilla.
-- `cli.py`: comandos reproducibles de entrenamiento e inferencia.
+El modelo causal se entrenó sobre fragmentos de *Alice in Wonderland* y *Through the Looking-Glass*, mientras que la parte NER reutiliza el corpus anotado manualmente durante la preentrega del grupo 1.
 
-La implementacion interna se mantiene en `src/fdi_pln_2608_p5/modules/` y la
-raiz del paquete ofrece fachadas con nombres estables para una lectura mas clara.
+Aunque se trata de modelos relativamente pequeños y entrenados únicamente en CPU, el sistema completo funciona de forma reproducible y permite entrenar, generar texto, evaluar métricas e inferir entidades desde línea de comandos.
 
-## Instalacion
+---
 
-```bash
-uv sync
-```
+# Flujo general del proyecto
 
-El proyecto usa solo dependencias permitidas en la practica: `torch`, `numpy`,
-`click`, `typer`, `loguru`, `rich`, `dynaconf` y `python-dotenv`.
+El pipeline seguido durante la práctica fue el siguiente:
 
-## Comandos principales
+1. entrenamiento del tokenizador BPE sobre el corpus literario;
+2. entrenamiento del Transformer causal autoregresivo;
+3. generación y guardado de checkpoints;
+4. integración del corpus anotado manualmente durante la preentrega;
+5. conversión automática a formato CoNLL/BIO;
+6. reutilización del backbone Transformer para NER;
+7. entrenamiento de la cabeza de clasificación BIO;
+8. evaluación de métricas token-level y entity-level;
+9. inferencia final sobre texto arbitrario.
+
+Toda la práctica puede ejecutarse desde un único CLI:
 
 ```bash
 uv run fdi-pln-2608-p5 --help
-uv run fdi-pln-2608-p5 train-causal --help
-uv run fdi-pln-2608-p5 train-ner --help
-uv run fdi-pln-2608-p5 generate --help
-uv run fdi-pln-2608-p5 ner --help
-uv run fdi-pln-2608-p5 eval-ner --help
-uv run fdi-pln-2608-p5 analyze-bpe --help
-uv run fdi-pln-2608-p5 experiment-generate --help
 ```
 
-## Entrenamiento causal
+---
 
-Configuracion CPU-friendly por defecto:
-
-- `vocab_size=400`
-- `context_size=128`
-- `d_model=128`
-- `n_heads=4`
-- `n_layers=4`
-- `expansion=4`
-- `dropout=0.1`
-- `batch_size=32`
-- `lr=3e-4`
-- `epochs=8`
-- `seed=42`
-
-```bash
-uv run fdi-pln-2608-p5 train-causal \
-  --corpus resources \
-  --output checkpoints/p5_causal_2608.pth
-```
-
-Para una prueba mas rapida en CPU:
-
-```bash
-uv run fdi-pln-2608-p5 train-causal \
-  --corpus resources \
-  --output checkpoints/p5_causal_2608.pth \
-  --context-size 64 \
-  --n-layers 3 \
-  --epochs 5
-```
-
-## Generacion
-
-El checkpoint causal contiene tokenizador, configuracion, pesos, metricas y
-semilla. Por eso la inferencia solo necesita `--weights`:
-
-```bash
-uv run fdi-pln-2608-p5 generate \
-  --weights checkpoints/p5_causal_2608.pth \
-  --prompt "Alice was" \
-  --max-new-tokens 80 \
-  --top-k 20
-```
-
-`temperature` regula la aleatoriedad del muestreo. Valores bajos como `0.5`
-hacen la salida mas conservadora; valores altos como `1.2` exploran mas.
-
-## Entrenamiento NER
-
-El modelo NER carga el checkpoint causal, reutiliza embeddings y bloques
-Transformer, y sustituye la cabeza de lenguaje por una cabeza BIO por token.
-
-```bash
-uv run fdi-pln-2608-p5 train-ner \
-  --data data/ner/final.conll \
-  --causal-weights checkpoints/p5_causal_2608.pth \
-  --output checkpoints/p5_ner_2608.pth
-```
-
-Formato CoNLL esperado:
+# Estructura del proyecto
 
 ```text
-Alice B-PER
-met O
-the O
-Queen B-PER
-in O
-Wonderland B-LOC
+p5-g08/
+├── checkpoints/                     # Checkpoints entrenados del modelo causal y NER
+│   ├── p5_causal_2608.pth
+│   └── p5_ner_2608.pth
+│
+├── data/                            # Datos integrados para la tarea NER
+│   └── ner/
+│       ├── merged.json              # Corpus fusionado procedente de la preentrega
+│       └── final.conll              # Dataset convertido a formato BIO/CoNLL
+│
+├── examples/                        # Ejemplos de texto para pruebas e inferencia
+│   └── text.txt
+│
+├── reports/                         # Informes y métricas generadas durante evaluación
+│   ├── informe_2608.md
+│   └── ner_metrics_2608.json
+│
+├── resources/                       # Corpus literario utilizado para generación causal
+│   ├── alice_in_wonderland.txt
+│   └── looking_glass.txt
+│
+├── src/                             # Código fuente principal del proyecto
+│   └── fdi_pln_2608_p5/
+│       ├── modules/                 # Componentes internos del Transformer y NER
+│       ├── tokenizer.py             # Implementación del tokenizador BPE
+│       ├── attention.py             # Scaled multi-head self-attention
+│       ├── transformer.py           # Bloques Transformer y arquitectura base
+│       ├── causal_llm.py            # Modelo causal autoregresivo
+│       ├── ner_llm.py               # Modelo NER reutilizando el backbone
+│       ├── prepare_ner_data.py      # Conversión automática a formato BIO/CoNLL
+│       ├── checkpoint.py            # Guardado y carga de checkpoints
+│       └── main.py                  # CLI principal del proyecto
+│
+├── dist/                            # Wheel generado para la entrega final
+├── README.md                        # Documentación principal del proyecto
+├── pyproject.toml                   # Configuración del paquete Python
+├── uv.lock                          # Lockfile reproducible de dependencias
+└── .gitignore                       # Exclusión de artefactos y cachés
 ```
 
-Las etiquetas implementadas son `O`, `B-PER`, `I-PER`, `B-LOC` e `I-LOC`.
+---
 
-## Extraccion NER
+# Arquitectura
 
-```bash
-uv run fdi-pln-2608-p5 ner \
-  --weights checkpoints/p5_ner_2608.pth \
-  --file examples/text.txt
-```
+El proyecto está dividido en módulos relativamente independientes para mantener el código organizado y reutilizable.
 
-Tambien se puede pasar texto directo:
+## Tokenización
 
-```bash
-uv run fdi-pln-2608-p5 ner \
-  --weights checkpoints/p5_ner_2608.pth \
-  --text "Alice met the Queen in Wonderland"
-```
+`tokenizer.py`
 
-## Evaluacion NER
+Implementa un tokenizador BPE sencillo entrenado sobre los textos de Lewis Carroll. El vocabulario se construye fusionando pares frecuentes de caracteres.
 
-El comando `eval-ner` carga un checkpoint NER autocontenido, lee un fichero
-CoNLL/BIO y calcula metricas sin dependencias externas:
+---
 
-- token accuracy
-- token precision, recall y F1, excluyendo la clase `O`
-- entity precision, recall y F1 con coincidencia exacta BIO
+## Atención y Transformer
 
-```bash
-uv run fdi-pln-2608-p5 eval-ner \
-  --weights checkpoints/p5_ner_2608.pth \
-  --data data/ner/final.conll
-```
+`attention.py`
+`transformer.py`
 
-Durante `train-ner`, si existe particion de validacion, estas metricas tambien
-se guardan dentro del checkpoint en el campo `metrics`.
+Implementan:
 
-## Analisis BPE
+- multi-head self-attention;
+- máscara causal opcional;
+- residual connections;
+- LayerNorm;
+- feed-forward con GELU;
+- y embeddings posicionales.
 
-Para justificar la tokenizacion en el informe:
+El modelo causal utiliza atención enmascarada (`causal=True`), mientras que NER utiliza atención bidireccional (`causal=False`).
 
-```bash
-uv run fdi-pln-2608-p5 analyze-bpe \
-  --weights checkpoints/p5_causal_2608.pth \
-  --text "Alice went to Wonderland"
-```
+---
 
-Tambien acepta ficheros:
+## Modelo causal
 
-```bash
-uv run fdi-pln-2608-p5 analyze-bpe \
-  --weights checkpoints/p5_causal_2608.pth \
-  --file examples/text.txt
-```
+`causal_llm.py`
 
-El comando muestra ids, piezas decodificadas, numero de caracteres, numero de
-tokens, ratio caracteres/tokens y una segmentacion legible.
+Implementa el modelo autoregresivo encargado de generar texto token a token.
 
-## Experimentos de generacion
+Se reutiliza posteriormente como backbone para la tarea NER.
 
-El comando `experiment-generate` no entrena nada. Ejecuta una rejilla pequena
-con `temperature` en `0.5, 0.8, 1.2` y `top-k` en `10, 20, 50`, y guarda un
-markdown para completar manualmente:
+---
 
-```bash
-uv run fdi-pln-2608-p5 experiment-generate \
-  --weights checkpoints/p5_causal_2608.pth \
-  --prompt "Alice was" \
-  --out reports/generation_experiments.md
-```
+## Modelo NER
+
+`ner_llm.py`
+
+Sustituye la cabeza de lenguaje del Transformer por una capa BIO de clasificación de entidades.
+
+El modelo reutiliza embeddings y bloques Transformer aprendidos previamente durante el entrenamiento causal.
+
+---
 
 ## Checkpoints
 
-Los checkpoints finales deben llamarse:
+`checkpoint.py`
 
-- `checkpoints/p5_causal_2608.pth`
-- `checkpoints/p5_ner_2608.pth`
-
-Formato:
+Los checkpoints son autocontenidos e incluyen:
 
 ```python
 {
@@ -209,73 +157,214 @@ Formato:
 }
 ```
 
-Esto permite reconstruir el modelo sin depender de un fichero externo de
-tokenizador. Se conserva compatibilidad con checkpoints antiguos mediante
-`--tokenizer-path` si hiciera falta.
+Esto permite cargar completamente el modelo sin depender de configuraciones externas.
 
-## Decisiones tecnicas
+---
 
-La atencion calcula `Q`, `K` y `V` con una proyeccion lineal compartida y despues
-divide la representacion en cabezas. La matriz de atencion usa el producto
-`Q @ K.T`; se divide por `sqrt(head_dim)` para evitar logits demasiado grandes,
-que saturarian la softmax y producirian gradientes poco utiles.
+# Corpus utilizado
 
-La softmax transforma los logits de atencion en pesos positivos que suman 1, de
-modo que cada vector de contexto es una combinacion ponderada de los `values`.
+## Generación causal
 
-En generacion se usa `causal=True` para impedir que una posicion mire tokens
-futuros. En NER se usa `causal=False` porque la etiqueta de una palabra puede
-depender tanto del contexto izquierdo como del derecho.
+Para el entrenamiento del modelo causal se utilizaron:
 
-El alineamiento palabra -> BPE replica la etiqueta BIO de cada palabra sobre sus
-subtokens. Si una palabra `B-LOC` se divide en varias piezas, la primera conserva
-`B-LOC` y las siguientes reciben `I-LOC`.
+- `resources/alice_in_wonderland.txt`
+- `resources/looking_glass.txt`
 
-## Reproducibilidad
+Se eligieron estos textos por contener:
 
-Los entrenamientos fijan `seed=42` por defecto para Python, NumPy y PyTorch.
-Cada checkpoint guarda la semilla, la configuracion completa y las metricas del
-ultimo epoch. El dispositivo por defecto es CPU para que la practica sea
-reproducible sin GPU.
+- abundantes diálogos;
+- personajes recurrentes;
+- vocabulario relativamente variado;
+- y un estilo literario fácilmente reconocible.
 
-## Limitaciones CPU
+---
 
-El corpus y el modelo son pequenos por diseno. En CPU conviene empezar con
-`context_size=64`, `n_layers=3` y `epochs=5` para validar el flujo completo. La
-configuracion base mejora capacidad, pero tarda mas y puede requerir paciencia.
+## Corpus NER
 
-## Experimentos recomendados
+La parte NER reutiliza el corpus anotado manualmente durante la preentrega.
 
-El informe debe comparar:
+Fuente integrada:
 
-- `vocab_size`: 200 vs 400 vs 600
-- `context_size`: 64 vs 128
-- `n_layers`: 2 vs 4
-- `dropout`: 0.0 vs 0.1
-- `temperature`: 0.5 vs 0.8 vs 1.2
+```text
+data/ner/merged.json
+```
 
-Para cada experimento se recomienda guardar perdida de entrenamiento,
-perdida de validacion, ejemplos generados y una interpretacion breve.
-
-## Formato, build y release
+Conversión automática a CoNLL/BIO:
 
 ```bash
+uv run fdi-pln-2608-p5 prepare-ner-data --input ../pre-entrega_2601/merged.json --output data/ner/final.conll
+```
+
+Resumen del corpus:
+
+| Medida | Valor |
+| --- | ---: |
+| Frases fusionadas | 59 |
+| Tokens anotados | 5750 |
+| Tokens CoNLL | 3263 |
+| Tokens de entidad | 194 |
+| Kappa medio | 0.835 |
+| Acuerdo medio | 98% |
+
+Mapeo de etiquetas:
+
+| Preentrega | BIO |
+| --- | --- |
+| `o` | `O` |
+| `pi` | `B-PER` |
+| `pc` | `I-PER` |
+| `li` | `B-LOC` |
+| `lc` | `I-LOC` |
+
+---
+
+# Quickstart
+
+Instalación y ayuda general:
+
+```bash
+uv sync
+uv run fdi-pln-2608-p5 --help
+```
+
+---
+
+## Generación de texto
+
+```bash
+uv run fdi-pln-2608-p5 generate --weights checkpoints/p5_causal_2608.pth --prompt "Alice was" --max-new-tokens 80 --top-k 20
+```
+
+---
+
+## Entrenamiento NER
+
+```bash
+uv run fdi-pln-2608-p5 train-ner --data data/ner/final.conll --causal-weights checkpoints/p5_causal_2608.pth --output checkpoints/p5_ner_2608.pth
+```
+
+---
+
+## Evaluación NER
+
+```bash
+uv run fdi-pln-2608-p5 eval-ner --weights checkpoints/p5_ner_2608.pth --data data/ner/final.conll
+```
+
+---
+
+## Inferencia NER
+
+```bash
+uv run fdi-pln-2608-p5 ner --weights checkpoints/p5_ner_2608.pth --file examples/text.txt
+```
+
+---
+
+# Resultados obtenidos
+
+## Generación causal
+
+El modelo consigue capturar parcialmente el estilo del corpus original:
+
+- aparecen diálogos;
+- puntuación similar;
+- y nombres propios característicos de Lewis Carroll.
+
+Sin embargo, debido al tamaño reducido del dataset, todavía aparecen:
+
+- palabras deformadas;
+- repeticiones;
+- y pérdida de coherencia en textos largos.
+
+Ejemplo real:
+
+```text
+Alice was a worstanding large carriled it, and had put it: she stood out of
+we frightened so day.
+```
+
+---
+
+## Resultados NER
+
+Métricas principales:
+
+| Métrica | Valor |
+| --- | ---: |
+| Token accuracy | 0.8881 |
+| Token precision | 0.2666 |
+| Token recall | 0.7053 |
+| Token F1 | 0.3869 |
+| Entity precision | 0.1132 |
+| Entity recall | 0.5909 |
+| Entity F1 | 0.1901 |
+
+Desglose entity-level:
+
+| Tipo | F1 |
+| --- | ---: |
+| LOC | 0.1840 |
+| PER | 0.1919 |
+
+El modelo logra detectar bastantes entidades relevantes del corpus, especialmente personajes frecuentes, aunque todavía aparecen falsos positivos y confusiones entre tipos.
+
+Dado el tamaño del corpus anotado y el fuerte desbalance hacia la clase `O`, estos resultados eran relativamente esperables.
+
+---
+
+# Reproducibilidad
+
+Validación recomendada antes de entregar:
+
+```bash
+uv sync
 uv format --check
+uv run fdi-pln-2608-p5 --help
+
+uv run fdi-pln-2608-p5 generate --weights checkpoints/p5_causal_2608.pth --prompt "Alice was"
+
+uv run fdi-pln-2608-p5 eval-ner --weights checkpoints/p5_ner_2608.pth --data data/ner/final.conll
+
 uv build
 ```
 
-El wheel esperado para la release `p5v1.0` es:
+Wheel generado:
 
 ```text
-dist/fdi_pln_2608_p5-1.0.0-py3-none-any.whl
+dist/fdi_pln_2608_p5-1.0-py3-none-any.whl
 ```
 
-## Entrega final
+---
 
-La entrega debe incluir:
+# Limitaciones
 
-- `README.md`
-- `reports/informe_2608.md`
-- `checkpoints/p5_causal_2608.pth`
-- `checkpoints/p5_ner_2608.pth`
-- `dist/fdi_pln_2608_p5-1.0.0-py3-none-any.whl`
+Las principales limitaciones encontradas fueron:
+
+- corpus relativamente pequeño;
+- fuerte desbalance entre entidades y tokens `O`;
+- entrenamiento únicamente en CPU;
+- y vocabulario limitado.
+
+En generación causal esto produce:
+
+- repeticiones;
+- deformaciones léxicas;
+- y pérdida de coherencia en secuencias largas.
+
+En NER aparecen:
+
+- falsos positivos;
+- errores de delimitación;
+- y confusión entre PER y LOC.
+
+Aun así, el pipeline completo funciona correctamente y permite entrenar, evaluar e inferir entidades de forma reproducible.
+
+---
+
+# Integrantes
+
+Estudiantes del grado de Ingeniería de Datos e Inteligencia Artificial de la Universidad Complutense de Madrid.
+
+- Marina Triviño de las Heras
+- Carlota Salazar Martín

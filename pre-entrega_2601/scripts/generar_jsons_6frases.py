@@ -1,23 +1,20 @@
-"""Plantillas nuevas: 6 frases por JSON, mínimo 20 palabras (no sobrescribe alice_jsons/)."""
+"""Genera plantillas nuevas: 6 frases por JSON, mínimo 20 palabras."""
 
 from pathlib import Path
 
-from fdi_pln_2611_p5.annotations.templates import (
-    crear_jsons_anotacion,
-    tokenizar_palabras,
-)
+from scripts.templates import crear_jsons_anotacion, tokenizar_palabras
 
-# 13 anotadores × 6 frases = 78 huecos → 39 frases distintas (cada una en 2 JSON)
 N_JSON = 13
 FRASES_POR_JSON = 6
 MIN_PALABRAS = 20
 SEED = 46
 
 if __name__ == "__main__":
-    base = Path(__file__).resolve().parent
+    root = Path(__file__).resolve().parents[1]
+
     info = crear_jsons_anotacion(
-        archivo_entrada=base / "data" / "alice_in_wonderland.txt",
-        directorio_salida=base / "data" / "alice_jsons_6frases",
+        archivo_entrada=root / "corpus_original" / "alice_in_wonderland.txt",
+        directorio_salida=root / "asignaciones" / "generadas_6frases",
         tokenizar=tokenizar_palabras,
         granularidad="palabra",
         n_frases=None,
@@ -26,6 +23,7 @@ if __name__ == "__main__":
         min_palabras=MIN_PALABRAS,
         seed=SEED,
     )
+
     print(
         f"Generados {info['n_json']} JSON en {info['directorio']} "
         f"({info['n_frases']} frases, {info['frases_por_json']}/JSON, "
