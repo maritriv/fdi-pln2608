@@ -38,7 +38,17 @@ El pipeline seguido durante la práctica fue el siguiente:
 8. evaluación de métricas token-level y entity-level;
 9. inferencia final sobre texto arbitrario.
 
-Toda la práctica puede ejecutarse desde un único CLI:
+Toda la práctica se ejecuta desde un único CLI:
+
+```bash
+uv run fdi-pln-2608-p5
+```
+
+Al lanzar el comando principal sin subcomandos se abre un menú interactivo para
+probar las funciones principales con valores por defecto: generación de texto,
+NER, evaluación del modelo NER y análisis BPE.
+
+La ayuda completa y los comandos disponibles pueden consultarse mediante:
 
 ```bash
 uv run fdi-pln-2608-p5 --help
@@ -220,20 +230,148 @@ Mapeo de etiquetas:
 
 # Quickstart
 
-Instalación y ayuda general:
+Desde la raíz del repositorio:
 
 ```bash
+cd p5-g08
 uv sync
+uv run fdi-pln-2608-p5
+```
+
+El primer comando instala las dependencias declaradas en `pyproject.toml`. El
+segundo abre la aplicación interactiva de la práctica.
+
+---
+
+## Uso del programa
+
+Toda la práctica se maneja desde un único ejecutable. Puede usarse de dos
+formas: con un menú guiado o con subcomandos directos.
+
+## Uso interactivo
+
+Para abrir la aplicación:
+
+```bash
+cd p5-g08
+uv run fdi-pln-2608-p5
+```
+
+Al ejecutarlo sin argumentos aparece un menú visual en la terminal:
+
+```text
+P5 · Transformer + NER
+Grupo 2608
+
+¿Qué quieres hacer?
+
+  [1] Generar texto
+  [2] Detectar entidades NER en un fichero
+  [3] Evaluar el modelo NER
+  [4] Analizar tokenización BPE
+  [5] Ver comandos disponibles
+  [0] Salir
+```
+
+El uso normal es escribir el número de la opción y pulsar Enter. Cada flujo pide
+solo los parámetros necesarios y muestra el valor por defecto entre corchetes.
+Si pulsas Enter sin escribir nada, se usa ese valor.
+
+Defaults principales:
+
+| Opción | Valores por defecto |
+| --- | --- |
+| Generar texto | `checkpoints/p5_causal_2608.pth`, prompt `Alice was`, 80 tokens, top-k 20, temperature 1.0 |
+| Detectar entidades | `checkpoints/p5_ner_2608.pth`, `examples/text.txt` |
+| Evaluar NER | `checkpoints/p5_ner_2608.pth`, `data/ner/final.conll` |
+| Analizar BPE | `checkpoints/p5_causal_2608.pth`, texto `Alice went to Wonderland` |
+
+Después de cada operación, el programa muestra el resultado en una sección
+separada y espera a que pulses Enter para volver al menú. Para salir, elige
+`0`.
+
+Ejemplo de sesión:
+
+```text
+uv run fdi-pln-2608-p5
+Selección: 1
+Checkpoint [checkpoints/p5_causal_2608.pth]:
+Prompt [Alice was]:
+Max new tokens [80]: 20
+Top-k [20]:
+Temperature [1.0]:
+```
+
+## Comandos directos
+
+El modo interactivo es cómodo para enseñar la práctica, pero los comandos
+directos siguen siendo la forma más reproducible de lanzar experimentos:
+
+```bash
+uv run fdi-pln-2608-p5 generate --weights checkpoints/p5_causal_2608.pth --prompt "Alice was"
+uv run fdi-pln-2608-p5 ner --weights checkpoints/p5_ner_2608.pth --file examples/text.txt
+uv run fdi-pln-2608-p5 eval-ner --weights checkpoints/p5_ner_2608.pth --data data/ner/final.conll
+```
+
+Para ver todos los parámetros:
+
+```bash
 uv run fdi-pln-2608-p5 --help
 ```
 
+Comandos principales:
+
+| Comando | Uso |
+| --- | --- |
+| `train-causal` | Entrena el modelo causal de generación. |
+| `generate` | Genera texto a partir de un prompt. |
+| `prepare-ner-data` | Convierte `merged.json` a CoNLL/BIO. |
+| `train-ner` | Entrena el modelo NER desde el checkpoint causal. |
+| `eval-ner` | Evalúa el checkpoint NER sobre un dataset CoNLL. |
+| `ner` | Detecta entidades nombradas en un fichero o texto. |
+| `analyze-bpe` | Muestra la segmentación BPE de un texto. |
+| `experiment-generate` | Genera una tabla de experimentos de generación. |
+
 ---
+
 
 ## Generación de texto
 
 ```bash
 uv run fdi-pln-2608-p5 generate --weights checkpoints/p5_causal_2608.pth --prompt "Alice was" --max-new-tokens 80 --top-k 20
 ```
+
+Parámetros principales:
+
+- `--weights`: checkpoint causal que se quiere cargar.
+- `--prompt`: texto inicial proporcionado por el usuario.
+- `--max-new-tokens`: número máximo de tokens generados.
+- `--top-k`: restringe el muestreo a los tokens más probables.
+- `--temperature`: controla la aleatoriedad de la salida.
+
+---
+
+## Entrenamiento causal
+
+```bash
+uv run fdi-pln-2608-p5 train-causal \
+  --corpus resources \
+  --output checkpoints/p5_causal_2608.pth
+```
+
+Este comando entrena el modelo de lenguaje causal sobre los textos de `resources/` y guarda un checkpoint autocontenido.
+
+---
+
+## Preparación de datos NER
+
+```bash
+uv run fdi-pln-2608-p5 prepare-ner-data \
+  --input ../pre-entrega_2601/merged.json \
+  --output data/ner/final.conll
+```
+
+Este paso convierte el corpus fusionado de la preentrega a formato CoNLL/BIO, que es el formato que consume `train-ner`.
 
 ---
 
@@ -243,6 +381,8 @@ uv run fdi-pln-2608-p5 generate --weights checkpoints/p5_causal_2608.pth --promp
 uv run fdi-pln-2608-p5 train-ner --data data/ner/final.conll --causal-weights checkpoints/p5_causal_2608.pth --output checkpoints/p5_ner_2608.pth
 ```
 
+Este comando carga el modelo causal indicado con `--causal-weights`, reutiliza su backbone Transformer y guarda el checkpoint NER en `--output`.
+
 ---
 
 ## Evaluación NER
@@ -251,6 +391,8 @@ uv run fdi-pln-2608-p5 train-ner --data data/ner/final.conll --causal-weights ch
 uv run fdi-pln-2608-p5 eval-ner --weights checkpoints/p5_ner_2608.pth --data data/ner/final.conll
 ```
 
+La evaluación imprime métricas token-level y entity-level, y guarda un resumen en `reports/ner_metrics_2608.json`.
+
 ---
 
 ## Inferencia NER
@@ -258,6 +400,16 @@ uv run fdi-pln-2608-p5 eval-ner --weights checkpoints/p5_ner_2608.pth --data dat
 ```bash
 uv run fdi-pln-2608-p5 ner --weights checkpoints/p5_ner_2608.pth --file examples/text.txt
 ```
+
+También puede usarse texto directo:
+
+```bash
+uv run fdi-pln-2608-p5 ner \
+  --weights checkpoints/p5_ner_2608.pth \
+  --text "Alice met the Queen in Wonderland"
+```
+
+La salida es una lista tabulada con la entidad detectada y su tipo (`PER` o `LOC`).
 
 ---
 
