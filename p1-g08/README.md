@@ -1,313 +1,162 @@
-# Trading Bot
+# Butler Trading Agent — PLN (Grupo 08)
 
-## 📖 Descripción
+--------------
+## Descripción
 
-Proyecto de **Procesamiento del Lenguaje Natural**.
+Este repositorio contiene la implementación de un **agente autónomo de negociación e intercambio de recursos** desarrollado para la práctica _"Los agentes de Butler"_ en la asignatura de Procesamiento del Lenguaje Natural (Grado en Ingeniería de Datos e Inteligencia Artificial, UCM).
 
-El objetivo es desarrollar un **agente basado en lenguaje natural** capaz de interactuar con un servidor de trueque mediante cartas y envío de recursos con otros agentes.
+El agente está diseñado para cohabitar en un entorno multiagente competitivo y dinámico. Su objetivo principal es interactuar con otros agentes mediante el envío de cartas (negociación) y paquetes (bienes) a través de un servidor central (Butler) para maximizar el progreso hacia sus propios objetivos de inventario.
 
-El agente es capaz de:
 
-- Leer cartas del buzón
-- Interpretar ofertas estructuradas y no estructuradas
-- Aceptar intercambios cuando son estratégicamente favorables
-- Enviar recursos automáticamente
-- Confirmar intercambios
-- Enviar ofertas proactivas con comportamiento parcialmente aleatorio
-- Evitar spam mediante cooldown por destinatario
+-------------------------------------------
+## Filosofía de Diseño y Estrategia Híbrida
 
-El sistema combina reglas deterministas, parsing por regex y extracción flexible mediante LLM (Ollama).
+A diferencia de los enfoques puramente deterministas o completamente basados en LLMs, este proyecto destaca por una arquitectura híbrida de tres niveles. El modelo de lenguaje local (Qwen2.5-VL / Qwen3-VL de 8B vía Ollama) no toma decisiones estratégicas directas; en su lugar, actúa como un extractor semántico avanzado.
 
----
-
-## 📁 Estructura general del repositorio
-```
-fdi-pln2608/
-├── pln/
-│ ├── api/ ← Comunicación con el servidor
-│ │ └── client.py
-│ │
-│ ├── nlp/ ← Procesamiento de lenguaje
-│ │ ├── llm.py
-│ │ ├── normalize.py
-│ │ └── parse.py
-│ │
-│ ├── trading/ ← Lógica de negociación
-│ │ ├── logic.py
-│ │ └── offers.py
-│ │
-│ ├── config.py ← Parámetros globales
-│ ├── game.py ← Funciones auxiliares
-│ ├── logger.py ← Sistema de logging
-│ ├── main.py ← Bucle principal
-│ └── state.py ← Estado interno del agente
-│
-├── pyproject.toml ← Configuración del proyecto (uv)
-├── uv.lock ← Lockfile
-└── README.md ← Documentación principal
-```
-
----
-
-## 📚 Índice detallado
-
-### 📂 `pln/api/`
-
-Responsable de la comunicación con el servidor.
-
-**Archivo `client.py`:**
-
-- `get_info()` → obtiene recursos, objetivos, alias y buzón  
-- `get_gente()` → lista de jugadores  
-- `enviar_carta()` → envía una carta  
-- `enviar_paquete()` → envía recursos  
-- `borrar_carta()` → elimina carta procesada  
-
----
-
-### 📂 `pln/nlp/`
-
-Procesamiento lingüístico.
-
-**`normalize.py`**
-- Normalización de nombres de recursos
-- Normalización de texto libre
-- Detección de alias propio
-- Filtrado de cartas del sistema
-
-**`parse.py`**
-- `parse_oferta_v1()` → parseo estructurado
-- `extraer_oferta_1x1_regex()` → extracción simple por regex
-
-**`llm.py`**
-- `interpretar_carta_a_listas()` → extracción flexible mediante LLM  
-Devuelve siempre:
-
-```json
-{"quiere": [...], "ofrece": [...]}
-```
----
-
-### 📂 `pln/trading/`
-
-Lógica del sistema de negociación.
-
-**`logic.py`**
-
-- `evaluar_y_ejecutar_trueque()` → decide si aceptar oferta  
-- `es_carta_confirmacion_pendiente()` → detecta confirmaciones  
-- `procesar_confirmacion_pendiente()` → completa intercambio pendiente  
-- Funciones de confirmación de envío  
-
-**`offers.py`**
-
-- Gestión de cooldown anti-spam  
-- Registro de ofertas pendientes  
-- Generación de mensajes `[OFERTA_V1]`  
-- Selección de intercambio 1x1  
-
----
-
-### 📂 `pln/state.py`
-
-Estado interno en memoria:
-
-- `ULTIMO_ENVIO_A` → control anti-spam  
-- `PAQUETES_ENVIADOS` → evitar duplicados  
-- `OFERTAS_PENDIENTES` → seguimiento de intercambios abiertos  
-
----
-
-### 📂 `pln/game.py`
-
-Funciones auxiliares del flujo principal:
-
-- Cálculo de recursos sobrantes  
-- Cálculo de recursos faltantes  
-- Selección de carta prioritaria  
-- Envío de ofertas proactivas  
-
----
-
-### 📂 `pln/config.py`
-
-Parámetros configurables:
-
-- Probabilidad de enviar oferta  
-- Intervalo de espera entre iteraciones  
-- Cooldown anti-spam  
-- Dirección del servidor  
-
----
-
-### 📂 `pln/logger.py`
-
-Sistema de logging simple:
-
-```python
-log("mensaje")
-```
-
-## 📂 `pln/main.py`
-
-Contiene el **bucle principal del bot**.
-
-### 🔄 Flujo por iteración
-
-1. Obtener estado del servidor  
-2. Calcular recursos sobrantes y faltantes  
-3. Limpiar estados antiguos  
-4. Procesar una carta (priorizando confirmaciones)  
-5. Decidir si enviar oferta proactiva  
-6. Esperar tiempo aleatorio  
-7. Repetir  
-
----
-
-## 🔁 Flujo del sistema
-
-### 1️. Consulta estado
-
-El agente consulta:
+La lógica de negocio y la toma de decisiones financieras permanecen blindadas bajo reglas deterministas en código Python. Cuando llega una carta, el agente activa un pipeline de procesamiento lingüístico en cascada:
 
 ```
-GET /info
+📥 Carta Recibida
+       │
+       ▼
+┌─────────────────────────────┐
+│ 1. Parsing Estructurado    │ ──(¿Formato OFERTA_V1?)──► [Aceptado/Procesado]
+└─────────────────────────────┘
+       │ No
+       ▼
+┌─────────────────────────────┐
+│ 2. Extracción Regex         │ ──(¿Patrón 1x1 match?)──► [Aceptado/Procesado]
+└─────────────────────────────┘
+       │ No
+       ▼
+┌─────────────────────────────┐
+│ 3. Inferencia Semántica LLM │ ──(Ollama Inferencia)───► Extract: {quiere, ofrece}
+└─────────────────────────────┘
 ```
 
-Obtiene:
+Esta estrategia garantiza cuatro ventajas críticas en el sistema:
 
-- Recursos actuales  
-- Objetivos  
-- Alias propio  
-- Buzón  
+- **Robustez Extrema**: Tolerancia absoluta a mensajes con lenguaje natural ambiguo, informal o mal formateado.
 
----
+- **Eficiencia Computacional**: Si un agente competidor envía un formato estructurado, el pipeline lo procesa instantáneamente mediante Regex, evitando el coste temporal de una llamada al LLM.
 
-### 2️. Análisis estratégico
+- **Seguridad Operacional**: Al delegar la lógica de aceptación ("¿me conviene este trato?") a funciones deterministas basadas en matrices de inventario, eliminamos por completo el riesgo de alucinación del modelo.
 
-Se calculan:
 
-- **Recursos sobrantes** → recursos que puede ofrecer  
-- **Recuross faltantes** → recursos necesarios para cumplir el objetivo  
-
----
-
-### 3️. Procesamiento del buzón
-
-Si hay cartas:
-
-- Prioridad a confirmaciones pendientes  
-
-Si no:
-
-- Extraer oferta (OFERTA_V1 → regex → LLM)  
-- Aceptar solo si:
-  - Lo ofrecido ∈ faltantes  
-  - Lo pedido ∈ sobrantes  
-
----
-
-### 4. Gestión de pendientes
-
-Cuando el agente envía una oferta y el otro jugador confirma:
-
-- Se envía el recurso prometido  
-- Se elimina la oferta pendiente  
-
----
-
-### 5️. Oferta proactiva (probabilística)
-
-Con probabilidad `PROB_ENVIAR_OFERTA`:
-
-- Selecciona destinatario aleatorio  
-- Respeta cooldown  
-- Envía oferta 1x1  
-- Registra pendiente  
-
----
-
-### 6. Espera aleatoria
-
-Para evitar comportamiento determinista:
-
-```python
-sleep(random entre SLEEP_MIN y SLEEP_MAX)
+-----------------------------------
+## Arquitectura Modular del Sistema
+El proyecto se rige por el principio de separación de responsabilidades, dividiendo el sistema en módulos independientes localizados dentro del paquete `pln/`:
+```
+pln/
+├── api/          # Capa de transporte y red. Gestiona las peticiones HTTP (GET/POST) 
+│   └── client.py # contra los endpoints del servidor Butler (/info, /carta, /paquete).
+├── nlp/          # Core de procesamiento lingüístico. Contiene las funciones de sanitización,
+│   ├── llm.py    # normalización sintáctica, reglas regex y la interfaz con la API de Ollama.
+│   ├── normalize.py
+│   └── parse.py
+├── trading/      # Motor financiero y de negociación. Valida la viabilidad de los trueques,
+│   ├── logic.py  # controla los duplicados de transacciones y gestiona las ofertas activas.
+│   └── offers.py
+├── state.py      # Gestor del estado interno transaccional y persistencia en memoria viva.
+├── game.py       # Cerebro estratégico. Calcula excedentes, faltantes y prioriza acciones.
+├── config.py     # Archivo centralizado de hiperparámetros (cooldowns, sleeps, probabilidades).
+├── logger.py     # Motor de trazabilidad por consola del comportamiento del agente.
+└── main.py       # Punto de entrada. Ejecuta el Agentic Loop infinito.
 ```
 
----
 
-## 🛠️ Instalación del entorno
+---------------------------------------------
+## El Ciclo de Vida del Agente (Agentic Loop)
+El agente opera de manera asíncrona y autónoma mediante un bucle continuo (`while True`) estructurado bajo el paradigma Diseñar ➔ Actuar ➔ Observar:
 
-### 1. Clonar repositorio
 
+### 1. Sincronización de Estado y Análisis Estratégico
+
+Al inicio de cada iteración, el agente consulta el endpoint `/info` para sincronizar su alias, objetivos y recursos actuales. Inmediatamente después, el módulo `game.py` evalúa de forma dinámica la matriz de necesidades, dividiendo el inventario en dos listas vivas: `recursos_sobrantes` (monedas de cambio) y `recursos_faltantes` (objetivos prioritarios).
+
+### 2. Procesamiento Inteligente del Buzón
+
+El agente lee las cartas entrantes filtrando mensajes del sistema o autoenvíos. Procesa los textos mediante el pipeline de tres niveles (Estructurado ➔ Regex ➔ LLM) para traducir el lenguaje natural a un esquema estricto:
+```
+{
+  "quiere": ["Madera"],
+  "ofrece": ["Oro"]
+}
+```
+Una oferta se considera viable **únicamente** si el recurso ofrecido por el rival se encuentra en nuestra lista de `faltantes` y el recurso solicitado pertenece a nuestros `sobrantes`. Para fomentar la liquidez en fases tempranas, el agente cuenta con un margen de generosidad configurable que flexibiliza el valor de los intercambios.
+
+### 3. Resolución Transaccional y Ofertas Proactivas
+
+- **Respuestas y Envío de Paquetes**: Si una oferta es aprobada (o si se detecta una confirmación de un intercambio que nosotros propusimos previamente), el agente ejecuta el envío físico de los recursos mediante `/enviar_paquete` y limpia de forma segura el buzón con `/borrar_carta` para evitar el desbordamiento del contexto.
+
+- **Estrategia Proactiva**: Si no hay mensajes entrantes, el agente calcula mediante una distribución probabilística (`PROB_ENVIAR_OFERTA`) si debe iniciar una negociación. Elige un destinatario del ecosistema de manera aleatoria, comprueba las restricciones de _cooldown anti-spam_ en `offers.py`, genera una propuesta formal y la envía al mercado, registrándola internamente como oferta pendiente.
+
+### 4. Mitigación de Comportamientos Predecibles
+
+Para evitar colisiones de red con otros bots y mitigar patrones de comportamiento que puedan ser explotados por agentes rivales, el bucle finaliza aplicando un retardo estocástico calculado dinámicamente entre un umbral configurable (`SLEEP_MIN` y `SLEEP_MAX`).
+
+
+----------------------------------------------------
+## 🔒 Mecanismos de Robustez y Seguridad Operacional
+
+Para garantizar la estabilidad del agente durante ejecuciones prolongadas en entornos hostiles, se han implementado las siguientes protecciones:
+
+- **Filtro Anti-Spam**: Sistema de cooldown temporal que bloquea envíos masivos hacia un mismo agente si este no responde a ofertas previas.
+
+- **Control de Duplicados**: Validación de hashes de cartas procesadas para evitar la doble ejecución de transacciones idénticas.
+
+- **Tolerancia a Fallos de Red**: Captura de excepciones en la capa de comunicación HTTP con reintentos exponenciales automáticos ante caídas intermitentes del servidor Butler.
+
+- **Cierre Seguro (Graceful Shutdown)**: El script captura de forma nativa la señal SIGINT (Ctrl + C), asegurando que el agente complete cualquier transacción en curso antes de liberar los recursos y desconectarse del ecosistema.
+
+
+----------------------------------------------
+## 🛠️ Instalación y Configuración del Entorno
+
+### Prerrequisitos
+
+El proyecto utiliza uv, un instalador y gestor de entornos de Python extremadamente rápido escrito en Rust.
+
+#### 1. Clonar el repositorio:
 ```
 git clone https://github.com/maritriv/fdi-pln2608.git
-cd fdi-pln2608
+cd fdi-pln2608/p1-g08
 ```
 
----
-
-### 2. Instalar dependencias
-
-Instalar `uv` si no está instalado:
-
+#### 2. Instalar dependencias y sincronizar el entorno virtual:
 ```
 pip install uv
-```
-
-Crear entorno e instalar dependencias:
-
-```
 uv sync
 ```
 
----
-
-### 3. Configurar LLM (Ollama)
-
-Instalar Ollama y descargar modelo:
-
+#### 3. Configurar el entorno local de Ollama:
+Asegúrate de que el servicio de Ollama esté ejecutándose localmente (`http://localhost:11434`) y descarga el modelo visual e idiomático utilizado por el pipeline de extracción:
 ```
 ollama pull qwen3-vl:8b
 ```
 
-El bot usa:
+---------------------------
+## 🚀 Ejecución del Agente
 
+El comportamiento del agente se puede parametrizar mediante variables de entorno antes del lanzamiento.
+
+|Variable|Descripción|Ejemplo de valor|
+|--------|-----------|----------------|
+|`FDI_PLN__BUTLER_ADDRESS`|URL base del servidor Butler central|`[http://127.0.0.1:7719](http://127.0.0.1:7719)`|
+|`FDI_PLN__AGENTE`|Alias único asignado al agente en el servidor|`Mercader_G08`|
+
+Para arrancar el ciclo autónomo del agente, exporta la dirección del servidor y ejecuta el módulo principal con `uv`:
 ```
-http://localhost:11434/api/generate
-```
-
----
-
-## ▶️ Ejecución
-
-## 🚀 Ejecución
-
-Para lanzar el agente en el entorno del laboratorio, desde la raíz del proyecto:
-
-1. Definir la dirección del Butler:
-   ```
-   export FDI_PLN__BUTLER_ADDRESS="http://127.0.0.1:7719"
-   ```
-
-2. Ejecutar el agente:
-    ```
-    uv run fdi-pln-2608-p1
-    ```
-
-Para detener el bot:
-
-```
-Ctrl + C
+export FDI_PLN__BUTLER_ADDRESS="http://127.0.0.1:7719"
+uv run fdi-pln-2608-p1
 ```
 
-El sistema captura la señal y finaliza correctamente.
 
----
+--------------------------
+## 👥 Equipo de Desarrollo
 
-## Equipo de desarrollo
+Proyecto diseñado e implementado por estudiantes del Grado en Ingeniería de Datos e Inteligencia Artificial de la Universidad Complutense de Madrid (UCM):
 
-Este proyecto fue desarrollado por los siguientes estudiantes del Grado en Ingeniería de Datos e Inteligencia Artificial (UCM): 
-- Carlota Salazar Martín
-- Marina Triviño de las Heras
+- **Carlota Salazar Martín**
+- **Marina Triviño de las Heras**
+

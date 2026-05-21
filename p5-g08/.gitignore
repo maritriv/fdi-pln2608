@@ -1,0 +1,76 @@
+# Python
+__pycache__/
+*.pyc
+*.py[cod]
+*$py.class
+
+# Compilados / builds
+build/
+dist/
+*.egg-info/
+*.whl
+*.tar.gz
+*.zip
+
+# Entornos virtuales
+.venv/
+venv/
+env/
+
+# Ruff / formatters / linters
+.ruff_cache/
+.mypy_cache/
+.pytest_cache/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# VSCode / IDEs
+.vscode/
+.idea/
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Torch checkpoints temporales
+checkpoints/tmp/
+checkpoints/*.pt.old
+checkpoints/*.tmp
+checkpoints/*_debug.pth
+checkpoints/*_draft.pth
+
+# CUDA (por si acaso)
+*.cuda
+
+# Coverage
+.coverage
+htmlcov/
+
+# Archivos temporales
+tmp/
+temp/
+*.tmp
+*.bak
+*.old
+*.swp
+
+# Salidas experimentales grandes o regenerables
+outputs/
+runs/
+artifacts/
+reports/*.tmp
+reports/*.log
+
+# UV
+.python-version
+
+# NO ignorar checkpoints finales
+!checkpoints/p5_causal_2608.pth
+!checkpoints/p5_ner_2608.pth
+
+# NO ignorar tokenizer entrenado
+!checkpoints/tokenizer.pt

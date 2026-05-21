@@ -8,7 +8,6 @@ authors = [
 ]
 readme = "README.md"
 requires-python = ">=3.12"
-# Solo las librerías permitidas por el profesor
 dependencies = [
     "click",
     "loguru",
