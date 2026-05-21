@@ -1,0 +1,34 @@
+[project]
+name = "fdi-pln-2608-p1"
+version = "1.1"
+description = "Agente de negociación autónoma para PLN"
+authors = [
+    { name = "Carlota Salazar Martín" },
+    { name = "Marina Triviño de las Heras" }
+]
+readme = "README.md"
+requires-python = ">=3.12"
+# Solo las librerías permitidas por el profesor
+dependencies = [
+    "click",
+    "loguru",
+    "rich",
+    "ollama",
+    "requests",
+    "httpx",
+    "pydantic",
+    "pydantic-ai",
+    "fastapi",
+    "dynaconf",
+    "python-dotenv"
+]
+
+[project.scripts]
+fdi-pln-2608-p1 = "pln.main:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["pln"]
