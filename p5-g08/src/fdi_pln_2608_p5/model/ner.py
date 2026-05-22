@@ -5,7 +5,7 @@ import torch.nn as nn
 from torch.nn.functional import cross_entropy
 from torch.utils.data import Dataset
 
-from fdi_pln_2608_p5.modules.model import MiniLLM
+from fdi_pln_2608_p5.model.transformer import MiniLLM
 
 
 LABEL2ID = {

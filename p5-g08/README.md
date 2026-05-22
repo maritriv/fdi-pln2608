@@ -60,44 +60,53 @@ uv run fdi-pln-2608-p5 --help
 
 ```text
 p5-g08/
-├── checkpoints/                     # Checkpoints entrenados del modelo causal y NER
-│   ├── p5_causal_2608.pth
-│   └── p5_ner_2608.pth
-│
-├── data/                            # Datos integrados para la tarea NER
-│   └── ner/
-│       ├── merged.json              # Corpus fusionado procedente de la preentrega
-│       └── final.conll              # Dataset convertido a formato BIO/CoNLL
-│
-├── examples/                        # Ejemplos de texto para pruebas e inferencia
-│   └── text.txt
-│
-├── reports/                         # Informes y métricas generadas durante evaluación
-│   ├── informe_2608.md
-│   └── ner_metrics_2608.json
-│
-├── resources/                       # Corpus literario utilizado para generación causal
-│   ├── alice_in_wonderland.txt
-│   └── looking_glass.txt
-│
-├── src/                             # Código fuente principal del proyecto
-│   └── fdi_pln_2608_p5/
-│       ├── modules/                 # Componentes internos del Transformer y NER
-│       ├── tokenizer.py             # Implementación del tokenizador BPE
-│       ├── attention.py             # Scaled multi-head self-attention
-│       ├── transformer.py           # Bloques Transformer y arquitectura base
-│       ├── causal_llm.py            # Modelo causal autoregresivo
-│       ├── ner_llm.py               # Modelo NER reutilizando el backbone
-│       ├── prepare_ner_data.py      # Conversión automática a formato BIO/CoNLL
-│       ├── checkpoint.py            # Guardado y carga de checkpoints
-│       └── main.py                  # CLI principal del proyecto
-│
-├── dist/                            # Wheel generado para la entrega final
-├── README.md                        # Documentación principal del proyecto
-├── pyproject.toml                   # Configuración del paquete Python
-├── uv.lock                          # Lockfile reproducible de dependencias
-└── .gitignore                       # Exclusión de artefactos y cachés
+|-- checkpoints/                     # Checkpoints entrenados del modelo causal y NER
+|   |-- p5_causal_2608.pth
+|   `-- p5_ner_2608.pth
+|
+|-- data/ner/                        # Corpus NER integrado desde la preentrega
+|   |-- merged.json
+|   `-- final.conll
+|
+|-- examples/                        # Textos de ejemplo para inferencia
+|-- reports/                         # Informes, métricas y experimentos
+|-- resources/                       # Corpus literario usado para entrenamiento causal
+|
+|-- src/fdi_pln_2608_p5/
+|   |-- cli.py                       # Entry point del wheel
+|   |-- main.py                      # Import mínimo de la app Typer
+|   |-- cli_app/                     # CLI Typer + Rich
+|   |   |-- app.py                   # Definición de la aplicación
+|   |   |-- commands.py              # Subcomandos directos
+|   |   |-- interactive.py           # Menú interactivo
+|   |   `-- render.py                # Paneles, tablas y prompts Rich
+|   |
+|   |-- model/                       # Arquitectura Transformer y NER
+|   |   |-- attention.py
+|   |   |-- transformer.py
+|   |   `-- ner.py
+|   |
+|   |-- data/                        # Dataset causal y conversión NER a CoNLL
+|   |   |-- dataset.py
+|   |   `-- prepare_ner_data.py
+|   |
+|   |-- training/                    # Entrenamiento causal y NER
+|   |-- evaluation/                  # Evaluación NER y análisis BPE
+|   |-- generation/                  # Generación de texto e inferencia NER
+|   |-- tokenizer.py                 # Tokenizador BPE propio
+|   |-- checkpoint.py                # Guardado/carga de checkpoints
+|   `-- utils.py                     # Semillas, dispositivo y utilidades comunes
+|
+|-- dist/                            # Wheel final de la entrega
+|-- README.md
+|-- pyproject.toml
+|-- uv.lock
+`-- .gitignore
 ```
+
+La lógica está separada por responsabilidad: el CLI vive en `cli_app/`, el
+modelo en `model/`, los datos en `data/`, el entrenamiento en `training/`, la
+evaluación en `evaluation/` y la inferencia en `generation/`.
 
 ---
 
@@ -115,8 +124,8 @@ Implementa un tokenizador BPE sencillo entrenado sobre los textos de Lewis Carro
 
 ## Atención y Transformer
 
-`attention.py`
-`transformer.py`
+`src/fdi_pln_2608_p5/model/attention.py`
+`src/fdi_pln_2608_p5/model/transformer.py`
 
 Implementan:
 
@@ -133,7 +142,7 @@ El modelo causal utiliza atención enmascarada (`causal=True`), mientras que NER
 
 ## Modelo causal
 
-`causal_llm.py`
+`src/fdi_pln_2608_p5/model/transformer.py`
 
 Implementa el modelo autoregresivo encargado de generar texto token a token.
 
@@ -143,7 +152,7 @@ Se reutiliza posteriormente como backbone para la tarea NER.
 
 ## Modelo NER
 
-`ner_llm.py`
+`src/fdi_pln_2608_p5/model/ner.py`
 
 Sustituye la cabeza de lenguaje del Transformer por una capa BIO de clasificación de entidades.
 

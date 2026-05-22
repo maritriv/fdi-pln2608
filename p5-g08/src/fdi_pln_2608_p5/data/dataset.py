@@ -5,7 +5,7 @@ from pathlib import Path
 import torch
 from torch.utils.data import Dataset
 
-from fdi_pln_2608_p5.modules.tokenizer import BPETokenizer
+from fdi_pln_2608_p5.tokenizer import BPETokenizer
 
 
 def load_corpus(resources_path):

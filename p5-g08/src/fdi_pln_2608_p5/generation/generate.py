@@ -1,7 +1,7 @@
 import torch
 
 from fdi_pln_2608_p5.checkpoint import load_checkpoint, normalize_config
-from fdi_pln_2608_p5.modules.model import MiniLLM
+from fdi_pln_2608_p5.model.transformer import MiniLLM
 from fdi_pln_2608_p5.utils import resolve_device
 
 

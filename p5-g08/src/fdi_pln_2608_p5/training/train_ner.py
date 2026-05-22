@@ -10,8 +10,8 @@ from fdi_pln_2608_p5.checkpoint import (
     normalize_config,
     save_checkpoint,
 )
-from fdi_pln_2608_p5.evaluate import evaluate_ner_dataloader
-from fdi_pln_2608_p5.modules.ner import NERDataset, NERLLM, NUM_LABELS, collate_ner
+from fdi_pln_2608_p5.evaluation.evaluate_ner import evaluate_ner_dataloader
+from fdi_pln_2608_p5.model.ner import NERDataset, NERLLM, NUM_LABELS, collate_ner
 from fdi_pln_2608_p5.utils import resolve_device, set_seed
 
 

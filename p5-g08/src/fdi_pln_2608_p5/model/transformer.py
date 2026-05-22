@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from fdi_pln_2608_p5.modules.attention import Attention
+from fdi_pln_2608_p5.model.attention import Attention
 
 
 class FeedForward(nn.Module):
