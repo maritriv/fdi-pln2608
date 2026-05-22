@@ -7,7 +7,7 @@
 
 ## Descripción general
 
-El significado del lenguaje se basa en el contexto. Hoy en día es muy fácil usar un gran modelo de lenguaje (LLM) como una caja negra a través de una API, pero para entender realmente el culpable de la revolución actual de la IA, sentíamos que necesitábamos ensuciarnos las manos.
+El significado del lenguaje se basa en el contexto. Para comprender de verdad cómo una máquina es capaz de asimilarlo y procesarlo, no nos servía quedarnos en la superficie interactuando con modelos ya hechos; necesitábamos construir su arquitectura desde cero.
 
 Este proyecto es un acercamiento a la anatomía de un modelo de lenguaje. Hemos implementado desde cero un pequeño modelo basado en la arquitectura Transformer, construyendo y comprendiendo sus piezas fundamentales: desde la tokenización BPE propia y los embeddings, hasta la atención escalada (*scaled dot-product self-attention*).
 
