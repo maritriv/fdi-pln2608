@@ -9,8 +9,8 @@ from fdi_pln_2608_p5.checkpoint import (
     normalize_config,
     save_checkpoint,
 )
-from fdi_pln_2608_p5.modules.data import build_tokenizer_and_dataset
-from fdi_pln_2608_p5.modules.model import MiniLLM
+from fdi_pln_2608_p5.data.dataset import build_tokenizer_and_dataset
+from fdi_pln_2608_p5.model.transformer import MiniLLM
 from fdi_pln_2608_p5.utils import resolve_device, set_seed
 
 

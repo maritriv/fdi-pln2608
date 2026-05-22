@@ -6,11 +6,13 @@ __pycache__/
 
 # Compilados / builds
 build/
-dist/
+dist/*
 *.egg-info/
 *.whl
 *.tar.gz
 *.zip
+dist/*.tar.gz
+!dist/fdi_pln_2608_p5-1.0-py3-none-any.whl
 
 # Entornos virtuales
 .venv/

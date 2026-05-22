@@ -184,7 +184,7 @@ def compute_entity_metrics_by_type(pred_tags, gold_tags):
 def evaluate_ner_dataloader(model, dataloader, device, ignore_index=-100):
     """Ejecuta inferencia NER sobre un dataloader y calcula metricas."""
 
-    from fdi_pln_2608_p5.modules.ner import ID2LABEL
+    from fdi_pln_2608_p5.model.ner import ID2LABEL
 
     model.eval()
     pred_ids = []
@@ -222,7 +222,7 @@ def evaluate_ner_dataloader(model, dataloader, device, ignore_index=-100):
 def load_ner_checkpoint_model(weights, device=None):
     """Carga un checkpoint NER autocontenido."""
 
-    from fdi_pln_2608_p5.modules.ner import NERLLM, NUM_LABELS
+    from fdi_pln_2608_p5.model.ner import NERLLM, NUM_LABELS
 
     device = resolve_device(device)
     checkpoint = load_checkpoint(weights, map_location=device)
@@ -250,8 +250,8 @@ def evaluate_ner_checkpoint(weights, data_path, batch_size=16, device=None):
 
     from torch.utils.data import DataLoader
 
-    from fdi_pln_2608_p5.modules.ner import NERDataset, collate_ner
-    from fdi_pln_2608_p5.modules.train_ner import load_ner_data
+    from fdi_pln_2608_p5.model.ner import NERDataset, collate_ner
+    from fdi_pln_2608_p5.training.train_ner import load_ner_data
 
     model, tokenizer, config, device = load_ner_checkpoint_model(weights, device=device)
     ner_data = load_ner_data(data_path)

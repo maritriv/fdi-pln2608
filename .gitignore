@@ -11,6 +11,8 @@ __pycache__/
 build/
 develop-eggs/
 dist/
+!p5-g08/dist/
+!p5-g08/dist/fdi_pln_2608_p5-1.0-py3-none-any.whl
 downloads/
 eggs/
 .eggs/
@@ -24,6 +26,8 @@ share/python-wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+*.zip
+*.tar.gz
 MANIFEST
 
 # PyInstaller
