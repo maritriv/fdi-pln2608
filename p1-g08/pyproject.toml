@@ -1,6 +1,6 @@
 [project]
 name = "fdi-pln-2608-p1"
-version = "1.1"
+version = "2.0"
 description = "Agente de negociación autónoma para PLN"
 authors = [
     { name = "Carlota Salazar Martín" },

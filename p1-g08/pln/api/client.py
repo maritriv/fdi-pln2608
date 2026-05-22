@@ -103,9 +103,7 @@ def enviar_carta(
     con el propio remitente para evitar autoenvíos accidentales.
     """
     if es_mi_alias(dest, remi):
-        log(
-            f"(seguridad) Bloqueo: intento de enviarme carta a mí misma ({dest})."
-        )
+        log(f"(seguridad) Bloqueo: intento de enviarme carta a mí misma ({dest}).")
         return False
 
     payload = {
@@ -148,9 +146,7 @@ def enviar_paquete(
     Butler identifique correctamente al agente emisor.
     """
     if mi_alias and es_mi_alias(dest, mi_alias):
-        log(
-            f"(seguridad) Bloqueo: intento de enviarme paquete a mí misma ({dest})."
-        )
+        log(f"(seguridad) Bloqueo: intento de enviarme paquete a mí misma ({dest}).")
         return False
 
     try:

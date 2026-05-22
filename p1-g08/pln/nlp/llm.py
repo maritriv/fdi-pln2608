@@ -76,15 +76,11 @@ Contenido:
     data = parsear_json_llm(raw)
 
     quiere = [
-        normalizar_recurso(x)
-        for x in data.get("quiere", [])
-        if normalizar_recurso(x)
+        normalizar_recurso(x) for x in data.get("quiere", []) if normalizar_recurso(x)
     ]
 
     ofrece = [
-        normalizar_recurso(x)
-        for x in data.get("ofrece", [])
-        if normalizar_recurso(x)
+        normalizar_recurso(x) for x in data.get("ofrece", []) if normalizar_recurso(x)
     ]
 
     return {
