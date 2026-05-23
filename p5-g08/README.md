@@ -136,6 +136,36 @@ Por último, la ayuda completa y los comandos disponibles pueden consultarse med
 uv run fdi-pln-2608-p5 --help
 ```
 
+----
+
+## Flujo de la Aplicación (Demo Visual)
+
+Para que la experiencia de uso sea lo más interactiva y agradable posible, diseñamos un menú visual utilizando `Typer` y `Rich`. Aquí mostramos el flujo real de trabajo de nuestra herramienta:
+
+### Menú Principal
+Al ejecutar el programa sin argumentos (`uv run fdi-pln-2608-p5`), un menú guiado te recibe y permite acceder a todas las funciones sin necesidad de memorizar parámetros.
+![Menú principal de la aplicación](imágenes/menu_principal.png)
+
+### Opción 1: Generación Causal de Texto
+El modelo continúa el *prompt* introducido. La interfaz permite ajustar dinámicamente los hiperparámetros de inferencia (Temperatura, Top-k y límite de tokens) usando valores por defecto sensatos.
+![Generación de texto interactiva](imágenes/opcion_1.png)
+
+### Opción 2: Detección de Entidades (NER)
+El sistema analiza un texto (o fichero) y extrae de forma limpia y tabulada los personajes (`PER`) y lugares (`LOC`) detectados por el modelo, aplicando nuestra capa heurística de post-procesado visual.
+![Detección de entidades nombradas](imágenes/opcion_2.png)
+
+### Opción 3: Evaluación del Modelo NER
+Lanza el script de evaluación, mostrando en tiempo real el contraste entre las métricas a nivel de token (infladas por la clase mayoritaria "O") y las métricas reales a nivel de entidad.
+![Evaluación de métricas NER](imágenes/opcion_3.png)
+
+### Opción 4: Anatomía de la Tokenización BPE
+Una herramienta didáctica para visualizar exactamente cómo nuestro BPE trocea cualquier frase de entrada en sub-palabras, mostrando el ratio de compresión, los IDs resultantes y la decodificación.
+![Análisis del tokenizador BPE](imágenes/opcion_4.png)
+
+### Opción 5: Comandos Disponibles
+Imprime una "chuleta" rápida con los comandos directos equivalentes a las opciones del menú. Es ideal para cuando queremos automatizar tareas o lanzar un proceso rápido directamente desde la terminal saltándonos la interfaz visual.
+![Comandos disponibles](imágenes/opcion_5.png)
+
 ---
 
 ## Resultados y Rendimiento
