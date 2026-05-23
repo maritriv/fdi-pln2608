@@ -144,7 +144,9 @@ Para que la experiencia de uso sea lo más interactiva y agradable posible, dise
 
 ### Menú Principal
 Al ejecutar el programa sin argumentos (`uv run fdi-pln-2608-p5`), un menú guiado te recibe y permite acceder a todas las funciones sin necesidad de memorizar parámetros.
-![Menú principal de la aplicación](imágenes/menu_principal.png)
+<p align="center">
+  <img src="imágenes/menu_principal.png" width="500px" alt="Menú principal de la aplicación">
+</p>
 
 ### Opción 1: Generación Causal de Texto
 El modelo continúa el *prompt* introducido. La interfaz permite ajustar dinámicamente los hiperparámetros de inferencia (Temperatura, Top-k y límite de tokens) usando valores por defecto sensatos.
