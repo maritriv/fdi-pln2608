@@ -11,7 +11,7 @@ Todo el sistema ha sido programado desde cero, entrenado en CPU y encapsulado en
 
 En este informe, detallamos nuestras decisiones de diseño, los experimentos realizados, y nuestras reflexiones sobre los obstáculos que fuimos superando.
 
---
+---
 
 ## 2. El primer paso: Enseñar a leer (Tokenización BPE)
 
