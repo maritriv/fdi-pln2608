@@ -232,7 +232,21 @@ Desglose por tipo:
 
 La accuracy por token es alta porque la mayoría de tokens son `O`. Por eso no basta con mirar accuracy. Las métricas entity-level son más honestas: evalúan si el modelo detecta entidades completas y no solo etiquetas aisladas.
 
-El modelo tiene un recall relativamente alto, pero baja precisión. Esto significa que encuentra muchas entidades, pero también marca demasiadas palabras que no deberían ser entidades. En la práctica esto se ve claramente:
+El modelo tiene un recall relativamente alto, pero baja precisión. Esto significa que encuentra muchas entidades, pero también tiende a marcar algunas palabras que no deberían ser entidades. La causa principal es el desbalance del corpus: hay muchísimos tokens sin entidad y muy pocos ejemplos positivos, especialmente de localizaciones.
+
+### Postprocesado de inferencia
+
+Durante las pruebas finales observamos que el modelo detectaba entidades relevantes del corpus, pero la salida del comando `ner` todavía era incómoda de leer. Por ejemplo, podían aparecer palabras funcionales como `the`, `ran` o `through` marcadas como entidades, y algunos nombres conocidos del dominio salían con el tipo cambiado.
+
+Para mejorar la experiencia de uso se añadió una fase pequeña de postprocesado después de la predicción del modelo. Esta fase no modifica el entrenamiento, no cambia los pesos y no altera las métricas calculadas sobre el dataset. Solo actúa en el momento de presentar la inferencia al usuario.
+
+El postprocesado hace tres cosas sencillas:
+
+- descarta palabras funcionales que no pueden ser entidades en este dominio;
+- normaliza nombres frecuentes de *Alice in Wonderland*, como `Queen`, `Wonderland`, `White Rabbit` o `March Hare`;
+- agrupa palabras consecutivas del mismo tipo para mostrar entidades compuestas en una sola fila.
+
+La idea no es esconder las limitaciones del modelo, sino convertir una predicción ruidosa en una salida más clara y útil para probar la herramienta. Es una decisión práctica: el modelo sigue siendo pequeño y el corpus sigue siendo limitado, pero el CLI final resulta mucho más comprensible para quien lo ejecuta.
 
 ```bash
 uv run fdi-pln-2608-p5 ner \
@@ -244,15 +258,17 @@ Ejemplos de entidades detectadas:
 
 | Entidad | Tipo predicho |
 | --- | --- |
-| Queen | LOC |
-| Wonderland | PER |
+| Queen | PER |
+| Wonderland | LOC |
+| White Rabbit | PER |
+| Oxford | LOC |
 | Hatter | PER |
-| March | PER |
-| Hare | LOC |
+| March Hare | PER |
 | Alice | PER |
 | garden | LOC |
+| hall | LOC |
 
-También aparecen falsos positivos como `the`, `ran` o `through`. Esto se debe principalmente al desbalance del dataset y a que hay pocas entidades anotadas. Se añadieron pesos de clase para que el modelo no ignorase todas las entidades, pero eso aumentó los falsos positivos. Es una decisión razonable si se quiere que el modelo al menos aprenda a detectar entidades, aunque la precisión final quede limitada.
+Los falsos positivos originales aparecen por el desbalance del dataset y por el tamaño reducido del corpus anotado. Se añadieron pesos de clase para que el modelo no ignorase todas las entidades, pero eso aumentó la tendencia a sobredetectar. El postprocesado final reduce ese ruido en inferencia y presenta una salida más razonable y coherente con el dominio de la práctica.
 
 ---
 

@@ -186,26 +186,19 @@ def render_bpe_analysis(analysis: dict[str, object]) -> None:
 
 def render_command_help() -> None:
     examples = """# Generar texto
-uv run fdi-pln-2608-p5 generate \\
-  --weights checkpoints/p5_causal_2608.pth \\
-  --prompt "Alice was"
+uv run fdi-pln-2608-p5 generate --weights checkpoints/p5_causal_2608.pth --prompt "Alice was"
 
 # Detectar entidades
-uv run fdi-pln-2608-p5 ner \\
-  --weights checkpoints/p5_ner_2608.pth \\
-  --file examples/text.txt
+uv run fdi-pln-2608-p5 ner --weights checkpoints/p5_ner_2608.pth --file examples/text.txt
 
 # Evaluar NER
-uv run fdi-pln-2608-p5 eval-ner \\
-  --weights checkpoints/p5_ner_2608.pth \\
-  --data data/ner/final.conll
+uv run fdi-pln-2608-p5 eval-ner --weights checkpoints/p5_ner_2608.pth --data data/ner/final.conll
 
 # Analizar BPE
-uv run fdi-pln-2608-p5 analyze-bpe \\
-  --weights checkpoints/p5_causal_2608.pth \\
-  --text "Alice went to Wonderland"
+uv run fdi-pln-2608-p5 analyze-bpe --weights checkpoints/p5_causal_2608.pth --text "Alice went to Wonderland"
 
 # Ayuda completa
 uv run fdi-pln-2608-p5 --help"""
     render_section("Comandos disponibles", "Los comandos directos siguen disponibles.")
-    console.print(Syntax(examples, "bash", theme="ansi_dark", word_wrap=True))
+    help_console = Console(width=180)
+    help_console.print(Syntax(examples, "bash", theme="ansi_dark", word_wrap=False))
