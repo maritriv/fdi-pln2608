@@ -26,7 +26,8 @@ Si pasamos la frase *"Alice went to Wonderland"* por nuestro analizador:
 * Ratio de comprensión: 2.18 caracteres por token
 
 > Para comprobarlo empíricamente, podemos introducir esta instrucción en nuestra línea de comandos:
->  ```bash uv run fdi-pln-2608-p5 analyze-bpe --weights checkpoints/p5_causal_2608.pth \
+>  ```bash
+>  uv run fdi-pln-2608-p5 analyze-bpe --weights checkpoints/p5_causal_2608.pth \
 >  --text "Alice went to Wonderland"
 >  ```
 >  Se pueden probar otras frases sustituyéndolas en el apartado de "text".
